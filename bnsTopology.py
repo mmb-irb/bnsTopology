@@ -32,7 +32,21 @@ aa1c = {
 'TYR':'Y'
 }
 
-backbone_link_atoms = set({"P","O3'","O3*","N","C"})
+backbone_link_atoms = set({":P",":O3'",":O3*",":N",":C"})
+hbonds = {
+    'WC': [
+            ["G:N1", "C:N3"],
+            ["G:N2", "C:O2"],
+            ["G:O6", "C:N4"],
+            ["A:N6", "T:O4"],
+            ["A:N1", "T:N3"],
+            ["A:N6", "U:O4"],
+            ["A:N1", "U:N3"]
+    ],
+    'HG': []
+}
+
+
     
 class bnsTopology:
     
@@ -46,18 +60,21 @@ class bnsTopology:
 # 1. Detecting Chains        
         bckats = []
         for at in self.st.get_atoms():
-            if at.id in backbone_link_atoms:
+            if ':'+at.id in backbone_link_atoms:
                 bckats.append(at)
         
         nbsearch = NeighborSearch(bckats)        
 
         sets = []
+        covlinkres = set()
         for at1, at2 in nbsearch.search_all(COVLNK):
             if at1.get_parent() == at2.get_parent():
                 continue
             
             atom1 = Atom(at1)
             atom2 = Atom(at2)
+            
+            covlinkres.add (atom1.resid()+atom2.resid())
             
             if self.debug:
                 print ("#DEBUG: ", atom1.atid(), atom2.atid())
@@ -93,7 +110,44 @@ class bnsTopology:
         print ("#INFO: ResidueList")
         for s in sorted(sets,key=lambda s: int(s.ini)):
             print (','.join(s.getResidueList()))
+ 
+        print (covlinkres)
+#Base Pairs
+        print ("#INFO: Base pairs found")
+        
+        hbAtoms = set()
+        for hb in hbonds['WC']:
+            for rat in hb:
+                hbAtoms.add(rat)
+
+        wcats = []
+        for at in self.st.get_atoms():
+            if getoneletter(at.get_parent().get_resname())+':'+at.id in hbAtoms:
+                wcats.append(at)
+
+        wc_nbsearch = NeighborSearch(wcats)        
+
+        wcsets = []
+        
+        print (hbonds['WC'])
+        hbs0=[]
+        for at1, at2 in wc_nbsearch.search_all(HBLNK):
+            if at1.get_parent() == at2.get_parent():
+                continue    
+            atom1 = Atom(at1)
+            atom2 = Atom(at2)
+
+            if [atom1.attype(), atom2.attype()] not in hbonds['WC'] and [atom2.attype(), atom1.attype()] not in hbonds['WC']:
+                continue
+            if atom1.resid()+atom2.resid() in covlinkres or atom2.resid()+atom1.resid() in covlinkres:
+                continue
+            hbs0.append([atom1.atid(),atom2.atid(), at1-at2])
+        
+        for h in sorted(hbs0,key=lambda d: d[2]):
+            print ("DEBUG: ",h)
             
+        
+        
 def findInSetList(sets,item):
     i = 0
     while i < len(sets) and item not in sets[i].res:
@@ -102,6 +156,13 @@ def findInSetList(sets,item):
         return -1
     else:
         return i
+
+def getoneletter(id):        
+    id = id.rstrip().lstrip()
+    if not id in aa1c:
+        return 'X'
+    else:
+        return aa1c[id]
     
 class residueset:
     def __init__(self):
@@ -132,18 +193,14 @@ class residueset:
             seq[int(n)]=rn
         ss=''    
         for i in sorted(seq.keys()):
-            id =seq[i].rstrip().lstrip()
-            if id not in aa1c:
-                ss= ss + 'X'
-            else:
-                ss=ss+aa1c[id]
+            ss=ss+getoneletter(seq[i])
         return ss
     
     def getResidueList(self):
         seq=[]
         for r in self.res:
             (rn,ch,n)=r.split(':')
-            seq.append(str(n)+"-"+aa1c[rn.rstrip().lstrip()])
+            seq.append(str(n)+"-"+getoneletter(rn))
         return sorted(seq)
             
     
@@ -167,6 +224,9 @@ class Atom():
     
     def atid(self):
         return self.resid() + ":" + self.at.id
+    
+    def attype(self):
+        return getoneletter(self.at.get_parent().get_resname())+':'+self.at.id
     
     def resnum(self):
         (rn,ch,n) = self.resid().split(':')
