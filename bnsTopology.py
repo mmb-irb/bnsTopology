@@ -27,60 +27,72 @@ aa1c = {
 'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S', 'THR':'T', 'VAL':'V', 'TRP':'W',
 'TYR':'Y'
 }
+
+backbone_link_atoms = set({"P","O3'","O3*","N","C"})
     
 class bnsTopology:
     
     def __init__(self, pdb_path):
         self.pdb_path = pdb_path
+        parser = PDBParser(PERMISSIVE=1)
+        self.st = parser.get_structure('st', self.pdb_path)
         
     def run(self):
+# 1. Detecting Chains        
         bckats = []
-        sets = []
-        parser = PDBParser(PERMISSIVE=1)
-        st = parser.get_structure('struc', self.pdb_path)
-# Detecting Chains        
-        for at in st.get_atoms():
-            if at.id in set({"P","O3'","N","C"}):
+        for at in self.st.get_atoms():
+            if at.id in backbone_link_atoms:
                 bckats.append(at)
+        
         nbsearch = NeighborSearch(bckats)        
+
+        sets = []
         for at1, at2 in nbsearch.search_all(COVLNK):
             if at1.get_parent() == at2.get_parent():
                 continue
-            atom1 = atom(at1)
-            atom2 = atom(at2)
-            print atom1, atom2
-            i = j = 0
+            atom1 = Atom(at1)
+            atom2 = Atom(at2)
+            if verbose:
+                print (atom1.atid(), atom2.atid())
 
-            while i < len(sets) and atom1.resid() not in sets[i].res:
-                i = i + 1
+            i = findInSetList(sets,atom1.resid());
+            j = findInSetList(sets,atom2.resid())
+
+            if i == -1 and j == -1:
+                s = residueset()
+                s.add(atom1.resid())
+                s.add(atom2.resid())
+                sets.append(s)
             
-            while j < len(sets) and atom2.resid() not in sets[j].res:
-                j = j + 1
-            
-            if i == len(sets) and j == len(sets):
-                sets.append(residueset())
-                sets[len(sets)-1].add(atom1.resid())
-                sets[len(sets)-1].add(atom2.resid())
-            
-            elif i < len(sets) and j < len(sets) and i != j: 
+            elif i != -1 and j != -1 and i != j: 
                 sets[i].union(sets[j])
                 del sets[j]
             
-            elif i < len(sets):
+            elif j == -1:
                 sets[i].add(atom2.resid())
             
-            elif j < len(sets):
+            elif i == -1:
                 sets[j].add(atom1.resid())            
             
             if verbose:
                 for s in sorted(sets,key=lambda s: int(s.ini)):
-                    print s
+                    print (s)
         
-        print "Found ",len(sets)," chain(s)"
+        print ("Found ",len(sets)," chain(s)")
         
         for s in sorted(sets,key=lambda s: int(s.ini)):
-            print s.ini,":",s.getSequence()
+            print (s.ini,":",s.getSequence())
+
             
+def findInSetList(sets,item):
+    i = 0
+    while i < len(sets) and item not in sets[i].res:
+        i = i + 1
+    if i == len(sets):
+        return -1
+    else:
+        return i
+    
 class residueset:
     def __init__(self,usechains=False):
         self.ini=0
@@ -124,7 +136,7 @@ class residueset:
             id =seq[i].rstrip().lstrip()
             if id not in aa1c:
                 ss= ss + 'X'
-                print "Warning: Unknown Residue ",id
+     #           print "Warning: Unknown Residue ",id
             else:
                 ss=ss+aa1c[id]
         return ss
@@ -132,7 +144,7 @@ class residueset:
     def __str__(self):
         return str(self.ini) + ":" + self.getSequence()
     
-class atom:
+class Atom():
     def __init__(self, at, usechains=False):
         self.at = at
         self.res = at.get_parent()
@@ -161,5 +173,6 @@ class atom:
 
 
 if __name__ == "__main__":
+
     bnsTopology (sys.argv[1]).run()
 
