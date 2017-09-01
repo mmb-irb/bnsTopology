@@ -53,7 +53,11 @@ class bnsTopology:
     def __init__(self, pdb_path, debug=False):
         self.pdb_path = pdb_path
         parser = PDBParser(PERMISSIVE=1)
-        self.st = parser.get_structure('st', self.pdb_path)
+        try:
+            self.st = parser.get_structure('st', self.pdb_path)
+        except OSError:
+            print ("#ERROR: loading PDB")
+            sys.exit(2)
         self.debug = debug
         
     def run(self):
@@ -111,7 +115,9 @@ class bnsTopology:
         for s in sorted(sets,key=lambda s: int(s.ini)):
             print (','.join(s.getResidueList()))
  
-        print (covlinkres)
+        if self.debug:
+            print ("#DEBUG: linked residue pairs")
+            print ("#DEBUG: ",covlinkres)
 #Base Pairs
         print ("#INFO: Base pairs found")
         
@@ -131,23 +137,42 @@ class bnsTopology:
         
         print (hbonds['WC'])
         hbs0=[]
+        nhbs={}
         for at1, at2 in wc_nbsearch.search_all(HBLNK):
             if at1.get_parent() == at2.get_parent():
                 continue    
-            atom1 = Atom(at1)
-            atom2 = Atom(at2)
+            if at1.get_parent().id[1] < at2.get_parent().id[1]:
+                atom1 = Atom(at1)
+                atom2 = Atom(at2)
+            else:
+                atom1 = Atom(at2)
+                atom2 = Atom(at1)
 
             if [atom1.attype(), atom2.attype()] not in hbonds['WC'] and [atom2.attype(), atom1.attype()] not in hbonds['WC']:
                 continue
             if atom1.resid()+atom2.resid() in covlinkres or atom2.resid()+atom1.resid() in covlinkres:
                 continue
-            hbs0.append([atom1.atid(),atom2.atid(), at1-at2])
-        
-        for h in sorted(hbs0,key=lambda d: d[2]):
-            print ("DEBUG: ",h)
-            
-        
-        
+            hbs0.append([atom1.atid(),atom2.atid(), atom1.at-atom2.at])
+
+            if atom1.resid() not in nhbs:
+                nhbs[atom1.resid()] = {}
+            if atom2.resid() not in nhbs[atom1.resid()]:
+                nhbs[atom1.resid()][atom2.resid()]=0
+
+            nhbs[atom1.resid()][atom2.resid()]=nhbs[atom1.resid()][atom2.resid()]+1
+
+        if self.debug:
+            print ("#DEBUG: candidate WC HBs sorted by distance") 
+            for h in sorted(hbs0,key=lambda d: d[2]):
+                print ("#DEBUG: ",h)
+        if self.debug:
+            print ("#DEBUG: HB count per pair of residues")
+            for r1 in nhbs.keys():
+                for r2 in nhbs[r1].keys():
+                    if r1 == r2:
+                        continue
+                    print ("#DEBUG: ", r1, r2, nhbs[r1][r2])
+
 def findInSetList(sets,item):
     i = 0
     while i < len(sets) and item not in sets[i].res:
