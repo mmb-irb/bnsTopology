@@ -75,10 +75,14 @@ class bnsTopology:
             if at1.get_parent() == at2.get_parent():
                 continue
             
-            atom1 = Atom(at1)
-            atom2 = Atom(at2)
+            if at1.get_parent().id[1] < at2.get_parent().id[1]:
+                atom1 = Atom(at1)
+                atom2 = Atom(at2)
+            else:
+                atom1 = Atom(at2)
+                atom2 = Atom(at1)
             
-            covlinkres.add (atom1.resid()+atom2.resid())
+            covlinkres.add (atom1.resid()+','+atom2.resid())
             
             if self.debug:
                 print ("#DEBUG: ", atom1.atid(), atom2.atid())
@@ -113,7 +117,7 @@ class bnsTopology:
 # Nucleotide list
         print ("#INFO: ResidueList")
         for s in sorted(sets,key=lambda s: int(s.ini)):
-            print (','.join(s.getResidueList()))
+            print (','.join(s.getResidueIdList()))
  
         if self.debug:
             print ("#DEBUG: linked residue pairs")
@@ -135,12 +139,13 @@ class bnsTopology:
 
         wcsets = []
         
-        print (hbonds['WC'])
         hbs0=[]
         nhbs={}
         for at1, at2 in wc_nbsearch.search_all(HBLNK):
+
             if at1.get_parent() == at2.get_parent():
                 continue    
+
             if at1.get_parent().id[1] < at2.get_parent().id[1]:
                 atom1 = Atom(at1)
                 atom2 = Atom(at2)
@@ -150,7 +155,7 @@ class bnsTopology:
 
             if [atom1.attype(), atom2.attype()] not in hbonds['WC'] and [atom2.attype(), atom1.attype()] not in hbonds['WC']:
                 continue
-            if atom1.resid()+atom2.resid() in covlinkres or atom2.resid()+atom1.resid() in covlinkres:
+            if atom1.resid()+','+atom2.resid() in covlinkres or atom2.resid()+','+atom1.resid() in covlinkres:
                 continue
             hbs0.append([atom1.atid(),atom2.atid(), atom1.at-atom2.at])
 
@@ -159,12 +164,13 @@ class bnsTopology:
             if atom2.resid() not in nhbs[atom1.resid()]:
                 nhbs[atom1.resid()][atom2.resid()]=0
 
-            nhbs[atom1.resid()][atom2.resid()]=nhbs[atom1.resid()][atom2.resid()]+1
+            nhbs[atom1.resid()][atom2.resid()]=nhbs[atom1.resid()][atom2.resid()]+_hbscore(atom1.at,atom2.at)
+            
 
         if self.debug:
             print ("#DEBUG: candidate WC HBs sorted by distance") 
             for h in sorted(hbs0,key=lambda d: d[2]):
-                print ("#DEBUG: ",h)
+                print ("#DEBUGHBS: ",h)
         if self.debug:
             print ("#DEBUG: HB count per pair of residues")
             for r1 in nhbs.keys():
@@ -172,7 +178,26 @@ class bnsTopology:
                     if r1 == r2:
                         continue
                     print ("#DEBUG: ", r1, r2, nhbs[r1][r2])
-
+                
+        bps={}
+        for r1 in nhbs.keys():
+            maxv=0.
+            pair=''
+            for r2 in nhbs[r1].keys():
+                if nhbs[r1][r2]>maxv:
+                    pair=r2
+                    maxv=nhbs[r1][r2]
+            bps[r1] = r2
+            
+        for bp in bps.keys():
+            print (_bpid([bp,bps[bp]], comps=True))
+            
+        print ("#INFO: Base Pair steps")
+        
+            
+                
+        
+        
 def findInSetList(sets,item):
     i = 0
     while i < len(sets) and item not in sets[i].res:
@@ -189,6 +214,23 @@ def getoneletter(id):
     else:
         return aa1c[id]
     
+def _hbscore(at1,at2):    
+    d = at1-at2
+    return 2.6875-0.625*d
+    
+def _bpid(bp, comps=False):
+    (rn1,ch1,n1)= bp[0].split(':')
+    (rn2,ch2,n2)= bp[1].split(':')
+    rn1 = getoneletter(rn1)
+    rn2 = getoneletter(rn2)
+    bpid = str(n1)+"-"+rn1+rn2
+    if comps:
+        return bpid+"|"+str(n1)+'-'+rn1+','+str(n2)+'-'+rn2
+    else:
+        return bpid
+    
+    
+    
 class residueset:
     def __init__(self):
         self.ini=0
@@ -198,9 +240,9 @@ class residueset:
         self.res.add(resid)
         (rn, ch, n) = resid.split(':')   
         if self.ini == 0:
-            self.ini = n
+            self.ini = int(n)
         else:
-            self.ini=min(self.ini,n)
+            self.ini=min(self.ini,int(n))
     
     def union(self,other):
         self.res = self.res.union(other.res)
@@ -209,31 +251,37 @@ class residueset:
     def setini(self):
         for r in self.res:
             (rn, ch, n) = r.split(':')   
-            self.ini = min (self.ini,n)
+            self.ini = min (self.ini,int(n))
     
     def getSequence(self):
-        seq={}
-        for r in self.res:
-            (rn,ch,n)=r.split(':')
-            seq[int(n)]=rn
+        seq=self._getResidues()
+#        for r in self.res:
+#            (rn,ch,n)=r.split(':')
+#            seq[int(n)]=rn
         ss=''    
         for i in sorted(seq.keys()):
             ss=ss+getoneletter(seq[i])
         return ss
     
-    def getResidueList(self):
-        seq=[]
-        for r in self.res:
-            (rn,ch,n)=r.split(':')
-            seq.append(str(n)+"-"+getoneletter(rn))
-        return sorted(seq)
-            
+    def getResidueIdList(self):
+        seq=self._getResidues()
+        seql = []
+        for i in sorted(seq.keys()):
+            seql.append(str(i)+"-"+getoneletter(seq[i]))
+        return seql
     
-    def getAtoms(self, st):
-        atlist=[]
+    def _getResidues(self):
+        seq={}
         for r in self.res:
             (rn,ch,n)=r.split(':')
-            res = st.get_residue(())
+            seq[int(n)]=rn
+        return seq
+    
+#    def getAtoms(self, st):
+#        atlist=[]
+#        for r in self.res:
+#            (rn,ch,n)=r.split(':')
+#            res = st.get_residue(())
     
     def __str__(self):
         return str(self.ini) + ":" + self.getSequence()
@@ -257,6 +305,7 @@ class Atom():
         (rn,ch,n) = self.resid().split(':')
         return n
     
+    
     def __str__(self):
         return self.atid()
 
@@ -270,7 +319,7 @@ def main():
     #print (args)
     if not pdb_path:
         parser.print_help()
-        sys.exit(2)
+        sys.exit(2)        
     bnsTopology (args.pdb_path, debug=args.debug).run() 
 
 if __name__ == "__main__":
