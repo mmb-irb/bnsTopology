@@ -189,6 +189,8 @@ class BPair():
     def __init__(self,r1,r2):
         self.r1=r1
         self.r2=r2
+        types =[self.r1._getOneLetterResidueCode(), self.r2._getOneLetterResidueCode()]
+        self.type=''.join(sorted(types))
     
     def bpid(self):
         return str(self.r1.resNum())+"-"+self.r1._getOneLetterResidueCode()+self.r2._getOneLetterResidueCode()
@@ -204,6 +206,34 @@ class BPair():
     
     def __str__(self):
         return self.bpid()
+
+class BPStep():
+    def __init__(self,bp1,bp2):
+        self.bp1 =bp1
+        self.bp2 =bp2
+        bps = [self.bp1.r1._getOneLetterResidueCode() + self.bp2.r1._getOneLetterResidueCode(), self.bp2.r2._getOneLetterResidueCode() + self.bp1.r2._getOneLetterResidueCode()]
+        self.type= ''.join(sorted(bps))
+        
+    def stepid(self):
+        return str(self.bp1.r1.resNum())+"-"+self.bp1.r1._getOneLetterResidueCode() + self.bp2.r1._getOneLetterResidueCode() + self.bp2.r2._getOneLetterResidueCode() + self.bp1.r2._getOneLetterResidueCode()
+    
+    def comps(self):
+        return [self.bp1.bpid(),self.bp2.bpid()]
+    
+    def resNum(self):
+        return self.bp1.r1.resNum()
+    
+    def __eq__(self,other):
+        return self.bp1==other.bp1 and self.bp2 == other.bp2
+    
+    def __lt__(self,other):
+        return self.bp1<other.bp1
+    
+    def __str__(self):
+      return self.stepid()  
+    
+    def __hash__(self):
+        return hash(self.stepid())
         
 def main():
     
@@ -345,12 +375,56 @@ def main():
                 maxv=nhbs[r1][r2]
         bps.append(BPair(r1,r2))
     
+    bpsref={}
+    
     for bp in sorted(bps):
-        print (bp, ':',','.join(bp.comps()))
+        print (bp, '(',bp.type,'):',','.join(bp.comps()))
+        bpsref[bp.r1.resNum()]=bp
             
     print ("#INFO: Base Pair steps")
-        
-
+    
+    bpsteps=[]
+    for bp1 in sorted(bps):
+        for bp2 in sorted(bps):
+            if bp1 < bp2:
+                if bp1.r1.resNum() == bp2.r1.resNum()-1 and bp1.r2.resNum() == bp2.r2.resNum()+1:
+                    bpsteps.append(BPStep(bp1,bp2))
+    
+    bpstpref={}
+    for bpstp in sorted(bpsteps):
+        print (bpstp, '(',bpstp.type,'):', ','.join(bpstp.comps()))
+        bpstpref[bpstp.resNum()]=bpstp
+  
+    print ("#INFO: Helical segments")
+    
+    fragList=ChainList()
+    
+    for bpst1 in sorted(bpsteps):
+        for bpst2 in sorted(bpsteps):    
+            if bpst1 < bpst2:
+                if bpst1.bp1.r1.resNum() == bpst2.bp1.r1.resNum()-1:
+                    i = fragList.find(bpst1)
+                    j = fragList.find(bpst2)
+                    if i == -1 and j == -1:
+                        s = Chain()
+                        s.add(bpst2)
+                        s.add(bpst1)
+                        fragList.append(s)
+                    elif i != -1 and j != -1 and i != j: 
+                        fragList.chains[i].union(fragList.chains[j])
+                        fragList.delete(j)
+                    elif j == -1:
+                        fragList.chains[i].add(bpst2)
+                    elif i == -1:
+                        fragList.chains[j].add(bpst1)            
+                          
+    for fr in fragList.getSortedChains():
+        frag={}
+        for i in range (fr.ini,fr.fin+1):
+            for bb in bpstpref[i].comps():
+                frag[bb]=1
+        print (",".join(sorted(frag.keys())))
+    
 if __name__ == "__main__":
     main()
 
