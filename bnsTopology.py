@@ -369,11 +369,11 @@ def main():
     for r1 in nhbs.keys():
         maxv=0.
         pair=''
-        for r2 in nhbs[r1].keys():
+        for r2 in nhbs[r1].keys():            
             if nhbs[r1][r2]>maxv:
                 pair=r2
-                maxv=nhbs[r1][r2]
-        bps.append(BPair(r1,r2))
+                maxv=nhbs[r1][r2]                
+        bps.append(BPair(r1,pair))
     
     bpsref={}
     
