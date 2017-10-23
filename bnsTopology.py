@@ -186,11 +186,12 @@ class Atom():
         return self.atid()
 
 class BPair():
-    def __init__(self,r1,r2):
+    def __init__(self,r1,r2,score):
         self.r1=r1
         self.r2=r2
         types =[self.r1._getOneLetterResidueCode(), self.r2._getOneLetterResidueCode()]
         self.type=''.join(sorted(types))
+        self.score=score
     
     def bpid(self):
         return str(self.r1.resNum())+"-"+self.r1._getOneLetterResidueCode()+self.r2._getOneLetterResidueCode()
@@ -373,12 +374,12 @@ def main():
             if nhbs[r1][r2]>maxv:
                 pair=r2
                 maxv=nhbs[r1][r2]                
-        bps.append(BPair(r1,pair))
+        bps.append(BPair(r1,pair,maxv))
     
     bpsref={}
     
     for bp in sorted(bps):
-        print (bp, '(',bp.type,'):',','.join(bp.comps()))
+        print (bp, '(',bp.type,'):',','.join(bp.comps()), '(',str(bp.score),')')
         bpsref[bp.r1.resNum()]=bp
             
     print ("#INFO: Base Pair steps")
