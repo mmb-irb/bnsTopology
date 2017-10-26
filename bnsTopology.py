@@ -12,6 +12,7 @@ from Bio.PDB.PDBParser import PDBParser
 import os
 import sys
 import argparse
+import xml.sax
 
 COVLNK = 2.0
 HBLNK  = 3.5
@@ -254,7 +255,45 @@ class BPStep():
     def __hash__(self):
         return hash(self.stepid())
         
+class Graphml():
+    def __init__(self):
+        self.header =  """<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+    <graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" 
+        xmlns:java=\"http://www.yworks.com/xml/yfiles-common/1.0/java\" 
+        xmlns:sys=\"http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0\"
+        xmlns:x=\"http://www.yworks.com/xml/yfiles-common/markup/2.0\" 
+        xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" 
+        xmlns:y=\"http://www.yworks.com/xml/graphml\" 
+        xmlns:yed=\"http://www.yworks.com/xml/yed/3\" 
+        xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"> 
+    <key for=\"node\" id=\"d6\" yfiles.type=\"nodegraphics\"/>
+    <key for=\"edge\" id=\"d10\" yfiles.type=\"edgegraphics\"/>
+    <graph id=\"G\" edgedefault=\"directed\">
+"""
+        self.footer = "</graph>\n</graphml>"
+        self.body=[]
+    
+    def addResidue(self,i,r):
+        chcolors = ["#FF0000","#00FF00","#00FF00","#FFFF00","#FF00FF","#00FFFF"]
+        self.body.append(
+        "<node id=\"" + r.resid(1) + "\"><data key=\"d6\"><y:ShapeNode><y:Fill color=\""\
+            + chcolors[i] + "\" transparent=\"false\"/><y:NodeLabel>"+\
+            r.resid(1) + "</y:NodeLabel><y:Shape type=\"ellipse\"/></y:ShapeNode></data></node>"
+            )
+            
+    def addBond(self,pref,r1,r2):
+        self.body.append(
+            "<edge id=\"" + pref + r1.resid(1)+ r2.resid(1) + "\" source=\"" + r1.resid(1) + "\" target=\"" + r2.resid(1) + "\"></edge>"
+            )
+    def __str__(self):
+        return self.header + '\n'.join(self.body) +"\n"+ self.footer
+    
+    def save(self,file):
+        gmlout = open(file,"w+")
+        gmlout.write(str(self))
+        gmlout.close
 
+#================================================================================
 def main():
   
     parser = argparse.ArgumentParser(
@@ -265,22 +304,32 @@ def main():
     parser.add_argument(
         '--debug', '-d', 
         action='store_true', 
-        help='debug', 
-        dest='debug'
+        dest='debug',
+        help='Produce DEBUG output'
     )
 
     parser.add_argument(
         '--usechains', 
         action='store_true', 
-        help='Use Chain ids', 
-        dest='usechains'
+        dest='usechains',
+        help='Use PDB file chain ids'
     )
 
     parser.add_argument(
         '--graphml', 
         action='store_true', 
-        help='Produce Graphml file', 
-        dest='graphml'
+        dest='graphml',
+        help='Produce GraphML output file'
+    )
+
+    parser.add_argument(
+        '--bpthres', 
+        type = float,
+        action='store', 
+        help='BP Score min value (1.0)', 
+        dest='bpthres',
+        default = 1.0,
+        
     )
 
     parser.add_argument('pdb_path')
@@ -291,9 +340,7 @@ def main():
     pdb_path = args.pdb_path
     useChains = args.usechains
     graphml = args.graphml
-    
-    chcolors = ["#FF0000","#00FF00","#00FF00","#FFFF00","#FF00FF","#00FFFF"]
-    bpthres = 1.0
+    bpthres = args.bpthres
     
     if not pdb_path:
         parser.print_help()
@@ -320,14 +367,7 @@ def main():
                "when chains ids not used, consider renumbering or ")
 # Graphml output
     if graphml:
-        xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-        xml = xml + "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" xmlns:java=\"http://www.yworks.com/xml/yfiles-common/1.0/java\" " \
-                    + "xmlns:sys=\"http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0\" xmlns:x=\"http://www.yworks.com/xml/yfiles-common/markup/2.0\" " \
-                    + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:y=\"http://www.yworks.com/xml/graphml\" xmlns:yed=\"http://www.yworks.com/xml/yed/3\" "\
-                    + "xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"> \n"\
-                    + "<key for=\"node\" id=\"d6\" yfiles.type=\"nodegraphics\"/>\n"\
-                    + "<key for=\"edge\" id=\"d10\" yfiles.type=\"edgegraphics\"/>\n"\
-                    + "<graph id=\"G\" edgedefault=\"directed\">\n"
+        xml = Graphml()
 
 # 1. Detecting Chains        
     bckats = []
@@ -382,9 +422,8 @@ def main():
         print (s.ini,'-',s.fin,':', ','.join(s.getResidueIdList()))
         if graphml:
             for res in s.residues:
-                xml = xml + "<node id=\"" + res.resid(1) + "\"><data key=\"d6\"><y:ShapeNode><y:Fill color=\"" + chcolors[i] + "\" transparent=\"false\"/><y:NodeLabel>"+ res.resid(1) + "</y:NodeLabel><y:Shape type=\"ellipse\"/></y:ShapeNode></data></node>\n"
-        i=i+1
-        
+                xml.addResidue(i,res)
+        i=i+1        
  
     if debug:
         print ("#DEBUG: covalently linked residue pairs")
@@ -392,7 +431,7 @@ def main():
             print ("#DEBUG: ",r[0].resid(),r[1].resid())
     if graphml:
         for r in sorted(covLinkPairs, key=lambda i: i[0].resNum()):
-            xml = xml + "<edge id=\"ch" + r[0].resid(1)+ r[1].resid(1) + "\" source=\"" + r[0].resid(1) + "\" target=\"" + r[1].resid(1) + "\"></edge>\n"
+            xml.addBond('ch',r[0],r[1])
                 
 
 #Base Pairs
@@ -458,7 +497,7 @@ def main():
         print (bp, '(',bp.type,'):',','.join(bp.comps()), '(',str(bp.score),')')
         bpsref[bp.r1.resNum()]=bp
         if graphml:
-            xml = xml + "<edge id=\"bp" + bp.r1.resid(1) + bp.r2.resid(1) + "\" source=\"" + bp.r1.resid(1) + "\" target=\"" + bp.r2.resid(1) + "\"></edge>\n"
+            xml.addBond("bp",bp.r1, bp.r2)
 
 # Bpair steps from neighbour bps, relays on residue renumbering
     print ("#INFO: Base Pair steps")
@@ -513,10 +552,7 @@ def main():
         print (",".join(sorted(frag.keys())))
     
     if graphml:
-        xml = xml + "</graph></graphml>"
-        gmlout = open("output.graphml","w+")
-        gmlout.write(xml)
-        gmlout.close
+        xml.save("output.graphml")
         
 if __name__ == "__main__":
     main()
