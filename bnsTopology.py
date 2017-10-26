@@ -293,6 +293,8 @@ def main():
     graphml = args.graphml
     
     chcolors = ["#FF0000","#00FF00","#00FF00","#FFFF00","#FF00FF","#00FFFF"]
+    bpthres = 1.0
+    
     if not pdb_path:
         parser.print_help()
         sys.exit(2)        
@@ -447,7 +449,8 @@ def main():
             if nhbs[r1][r2]>maxv:
                 pair=r2
                 maxv=nhbs[r1][r2]                
-        bps.append(BPair(r1,pair,maxv))
+        if maxv > bpthres:
+            bps.append(BPair(r1,pair,maxv))
     
     bpsref={}
     
@@ -479,6 +482,11 @@ def main():
     fragList=ChainList()
     
     for bpst1 in sorted(bpsteps):
+        i = fragList.find(bpst1)
+        if i == -1:
+            s = Chain()
+            s.add(bpst1)
+            fragList.append(s)
         for bpst2 in sorted(bpsteps):    
             if bpst1 < bpst2:
                 if bpst1.bp1.r1.resNum() == bpst2.bp1.r1.resNum()-1:
