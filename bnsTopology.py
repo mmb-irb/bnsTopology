@@ -276,6 +276,13 @@ def main():
         dest='usechains'
     )
 
+    parser.add_argument(
+        '--graphml', 
+        action='store_true', 
+        help='Produce Graphml file', 
+        dest='graphml'
+    )
+
     parser.add_argument('pdb_path')
     
     args = parser.parse_args()
@@ -283,7 +290,9 @@ def main():
     debug = args.debug
     pdb_path = args.pdb_path
     useChains = args.usechains
+    graphml = args.graphml
     
+    chcolors = ["#FF0000","#00FF00","#00FF00","#FFFF00","#FF00FF","#00FFFF"]
     if not pdb_path:
         parser.print_help()
         sys.exit(2)        
@@ -307,7 +316,16 @@ def main():
     if not useChains and len(st) > 1:
         print ("#WARNING: Input PDB contains more than one chain ids ",\
                "when chains ids not used, consider renumbering or ")
-
+# Graphml output
+    if graphml:
+        xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+        xml = xml + "<graphml xmlns=\"http://graphml.graphdrawing.org/xmlns\" xmlns:java=\"http://www.yworks.com/xml/yfiles-common/1.0/java\" " \
+                    + "xmlns:sys=\"http://www.yworks.com/xml/yfiles-common/markup/primitives/2.0\" xmlns:x=\"http://www.yworks.com/xml/yfiles-common/markup/2.0\" " \
+                    + "xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:y=\"http://www.yworks.com/xml/graphml\" xmlns:yed=\"http://www.yworks.com/xml/yed/3\" "\
+                    + "xsi:schemaLocation=\"http://graphml.graphdrawing.org/xmlns http://www.yworks.com/xml/schema/graphml/1.1/ygraphml.xsd\"> \n"\
+                    + "<key for=\"node\" id=\"d6\" yfiles.type=\"nodegraphics\"/>\n"\
+                    + "<key for=\"edge\" id=\"d10\" yfiles.type=\"edgegraphics\"/>\n"\
+                    + "<graph id=\"G\" edgedefault=\"directed\">\n"
 
 # 1. Detecting Chains        
     bckats = []
@@ -357,13 +375,23 @@ def main():
 
 # Nucleotide list
     print ("#INFO: Residue Ids List")
+    i=0
     for s in chList.getSortedChains():
         print (s.ini,'-',s.fin,':', ','.join(s.getResidueIdList()))
+        if graphml:
+            for res in s.residues:
+                xml = xml + "<node id=\"" + res.resid(1) + "\"><data key=\"d6\"><y:ShapeNode><y:Fill color=\"" + chcolors[i] + "\" transparent=\"false\"/><y:NodeLabel>"+ res.resid(1) + "</y:NodeLabel><y:Shape type=\"ellipse\"/></y:ShapeNode></data></node>\n"
+        i=i+1
+        
  
     if debug:
         print ("#DEBUG: covalently linked residue pairs")
         for r in sorted(covLinkPairs, key=lambda i: i[0].resNum()):
             print ("#DEBUG: ",r[0].resid(),r[1].resid())
+    if graphml:
+        for r in sorted(covLinkPairs, key=lambda i: i[0].resNum()):
+            xml = xml + "<edge id=\"ch" + r[0].resid(1)+ r[1].resid(1) + "\" source=\"" + r[0].resid(1) + "\" target=\"" + r[1].resid(1) + "\"></edge>\n"
+                
 
 #Base Pairs
     print ("#INFO: Base pairs found")
@@ -426,6 +454,9 @@ def main():
     for bp in sorted(bps):
         print (bp, '(',bp.type,'):',','.join(bp.comps()), '(',str(bp.score),')')
         bpsref[bp.r1.resNum()]=bp
+        if graphml:
+            xml = xml + "<edge id=\"bp" + bp.r1.resid(1) + bp.r2.resid(1) + "\" source=\"" + bp.r1.resid(1) + "\" target=\"" + bp.r2.resid(1) + "\"></edge>\n"
+
 # Bpair steps from neighbour bps, relays on residue renumbering
     print ("#INFO: Base Pair steps")
     
@@ -473,5 +504,11 @@ def main():
                 frag[bb]=1
         print (",".join(sorted(frag.keys())))
     
+    if graphml:
+        xml = xml + "</graph></graphml>"
+        gmlout = open("output.graphml","w+")
+        gmlout.write(xml)
+        gmlout.close
+        
 if __name__ == "__main__":
     main()
