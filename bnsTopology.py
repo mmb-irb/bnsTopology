@@ -19,6 +19,22 @@ COVLNK = 2.0
 HBLNK  = 3.5
 BPTHRESDEF = 1.0
 
+
+def sameResidue(at1,at2):
+    return at1.get_parent() == at2.get_parent()
+
+def createResiduePair(at1,at2,useChains=False):
+# Defining residues as res1 < res2
+    if bnsTopLib.StructureWrapper.Residue(at1.get_parent(),useChains)\
+       < bnsTopLib.StructureWrapper.Residue(at2.get_parent(),useChains):
+        res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
+        res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+    else:
+        res2 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
+        res1 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+    return [res1,res2]
+
+
 def main():
 
     parser = argparse.ArgumentParser(
@@ -111,16 +127,10 @@ def main():
     covLinkPairs = set()
     chList = bnsTopLib.Chains.ChainList()
     for at1, at2 in nbsearch.search_all(COVLNK):
-        if at1.get_parent() == at2.get_parent():
+        if sameResidue(at1,at2):
             continue
-# Defining residues as res1 < res2
-        if bnsTopLib.StructureWrapper.Residue(at1.get_parent(),useChains)\
-            < bnsTopLib.StructureWrapper.Residue(at2.get_parent(),useChains):
-            res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
-            res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
-        else:
-            res2 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
-            res1 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+        
+        [res1,res2] = createResiduePair(at1,at2,useChains)
 
         covLinkPairs.add ((res1,res2))
 
@@ -181,7 +191,7 @@ def main():
 
     nhbs={}
     for at1, at2 in wc_nbsearch.search_all(HBLNK):
-        if at1.get_parent() == at2.get_parent():
+        if sameResidue(at1,at2):
             continue
 # Defining atoms being res1 < res2
         if bnsTopLib.StructureWrapper.Residue(at1.get_parent(),useChains) < bnsTopLib.StructureWrapper.Residue(at2.get_parent(),useChains):
@@ -192,6 +202,7 @@ def main():
             atom2 = bnsTopLib.StructureWrapper.Atom(at1, useChains)
         res1 = bnsTopLib.StructureWrapper.Residue(atom1.at.get_parent(),useChains)
         res2 = bnsTopLib.StructureWrapper.Residue(atom2.at.get_parent(),useChains)
+        
         if [atom1.attype(), atom2.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC'] and \
            [atom2.attype(), atom1.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC']:
             continue

@@ -30,16 +30,16 @@ class Residue():
         'DA5':'A', 'DC5':'C', 'DG5':'G', 'DT5':'T',
         'A5' :'A', 'C5' :'C', 'G5' :'G', 'U5' :'U',
         'MRA':'A',
-        'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G', 
-        'HIS':'H', 'HID':'H', 'HIE':'H', 'ILE':'I', 'LYS':'K', 'LEU':'L', 
-        'MET':'M', 'ASN':'N', 'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S', 
+        'ALA':'A', 'CYS':'C', 'ASP':'D', 'GLU':'E', 'PHE':'F', 'GLY':'G',
+        'HIS':'H', 'HID':'H', 'HIE':'H', 'ILE':'I', 'LYS':'K', 'LEU':'L',
+        'MET':'M', 'ASN':'N', 'PRO':'P', 'GLN':'Q', 'ARG':'R', 'SER':'S',
         'THR':'T', 'VAL':'V', 'TRP':'W', 'TYR':'Y'
-    }  
+    }
 
     def __init__(self, r, useChains=False):
         self.residue = r
         self.useChains = useChains
-    
+
     def resid(self, compact=False):
         if self.useChains:
             ch = ":"+self.residue.get_parent().id
@@ -48,11 +48,11 @@ class Residue():
         if compact:
             return self._getOneLetterResidueCode() + ch + str(self.residue.id[1])
         else:
-            return self.residue.get_resname() + ch + ':'+ str(self.residue.id[1])       
+            return self.residue.get_resname() + ch + ':'+ str(self.residue.id[1])
 
     def bnsid(self):
         return str(self.resNum())+"-"+self._getOneLetterResidueCode()
-    
+
     def resNum(self):
         if self.useChains:
             resNum = self.residue.get_parent().id + str(self.residue.id[1])
@@ -66,43 +66,43 @@ class Residue():
             return 'X'
         else:
             return Residue.oneLetterResidueCode[resid]
-    
+
     def __hash__(self):
         return hash(self.resid())
-    
-    def __eq__(self, other):        
+
+    def __eq__(self, other):
         return self.resid() == other.resid()
 
-    def __lt__(self, other):        
+    def __lt__(self, other):
         return self.resNum() < other.resNum()
-    
+
     def __str__(self):
         return self.resid()
-            
+
 class Atom():
     def __init__ (self, at, useChains=False):
          self.at=at
          self.useChains=useChains
-    
+
     def atid(self, compact=False):
         return self.resid(compact)+"."+self.at.id
-    
+
     def resid(self, compact=False):
         return Residue(self.at.get_parent(),self.useChains).resid(compact)
-  
+
     def resNum(self):
         return Residue(self.at.get_parent(),self.useChains).resNum()
 
     def attype(self):
         return Residue(self.at.get_parent(),self.useChains)._getOneLetterResidueCode()+'.'+self.at.id
-    
+
     def __lt__(self,other):
         return self.at.get_serial_number()
-    
+
     def __str__(self):
         return self.atid()
 
-    def _hbscore(self,other):    
+    def _hbscore(self,other):
         d = self.at - other.at
         return 2.6875 - 0.625*d
 
@@ -113,21 +113,21 @@ class BPair():
         types =[self.r1._getOneLetterResidueCode(), self.r2._getOneLetterResidueCode()]
         self.type=''.join(sorted(types))
         self.score=score
-    
+
     def bpid(self):
         return str(self.r1.resNum()) + "-" \
             + self.r1._getOneLetterResidueCode() \
             + self.r2._getOneLetterResidueCode()
-    
+
     def comps(self):
         return [self.r1.bnsid(),self.r2.bnsid()]
-    
+
     def __eq__(self,other):
         return self.r1==other.r1 and self.r2 == other.r2
-    
+
     def __lt__(self,other):
         return self.r1<other.r1
-    
+
     def __str__(self):
         return self.bpid()
 
@@ -137,32 +137,32 @@ class BPStep():
         self.bp1 =bp1
         self.bp2 =bp2
         bps = [
-            self.bp1.r1._getOneLetterResidueCode() + self.bp2.r1._getOneLetterResidueCode(), 
+            self.bp1.r1._getOneLetterResidueCode() + self.bp2.r1._getOneLetterResidueCode(),
             self.bp2.r2._getOneLetterResidueCode() + self.bp1.r2._getOneLetterResidueCode()
         ]
         self.type= ''.join(sorted(bps))
-        
+
     def stepid(self):
         return str(self.bp1.r1.resNum()) + "-" \
             + self.bp1.r1._getOneLetterResidueCode() \
             + self.bp2.r1._getOneLetterResidueCode() \
             + self.bp2.r2._getOneLetterResidueCode() \
             + self.bp1.r2._getOneLetterResidueCode()
-    
+
     def comps(self):
         return [self.bp1.bpid(),self.bp2.bpid()]
-    
+
     def resNum(self):
         return self.bp1.r1.resNum()
-    
+
     def __eq__(self,other):
         return self.bp1==other.bp1 and self.bp2 == other.bp2
-    
+
     def __lt__(self,other):
         return self.bp1<other.bp1
-    
+
     def __str__(self):
-      return self.stepid()  
-    
+      return self.stepid()
+
     def __hash__(self):
         return hash(self.stepid())
