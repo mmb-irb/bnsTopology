@@ -7,7 +7,7 @@ class ChainList():
     def __init__(self):
         self.chains=[]
         self.n=0
-   
+
     def find(self,item):
         i = 0
         while i < self.n and item not in self.chains[i].residues:
@@ -15,7 +15,7 @@ class ChainList():
         if i == self.n:
             return -1
         else:
-            return i        
+            return i
 
     def append(self,item):
         self.chains.append(item)
@@ -27,14 +27,14 @@ class ChainList():
 
     def getSortedChains(self):
         return sorted(self.chains,key=lambda s: int(s.ini))
-        
+
 
 class Chain():
     def __init__(self):
         self.ini=0
         self.fin=0
         self.residues = set()
-        
+
     def add(self,r):
         self.residues.add(r)
         if self.ini == 0:
@@ -45,7 +45,7 @@ class Chain():
             self.fin = int(r.resNum())
         else:
             self.fin = max(self.fin,int(r.resNum()))
-    
+
     def union(self,other):
         self.residues = self.residues.union(other.residues)
         self.ini = min(self.ini,other.ini)
@@ -53,18 +53,18 @@ class Chain():
 
     def getSequence(self):
         seq=self._getResidues()
-        ss=''    
+        ss=''
         for i in sorted(seq.keys()):
             ss=ss+seq[i]._getOneLetterResidueCode()
         return ss
-   
+
     def getResidueIdList(self):
         seq=self._getResidues()
         seql = []
         for i in sorted(seq.keys()):
             seql.append(str(i)+"-"+seq[i]._getOneLetterResidueCode())
         return seql
-    
+
     def _getResidues(self):
         seq={}
         for r in self.residues:

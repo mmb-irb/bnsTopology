@@ -1,6 +1,7 @@
-# To change this license header, choose License Headers in Project Properties.
-# To change this template file, choose Tools | Templates
-# and open the template in the editor.
+#
+# Convenient wrappers over BioPython classes
+# Hint: Include here interaction energies
+#
 
 __author__ = "gelpi"
 __date__ = "$27-oct-2017 13:59:14$"
@@ -53,42 +54,33 @@ class Residue():
         return str(self.resNum())+"-"+self._getOneLetterResidueCode()
     
     def resNum(self):
-        return self.residue.id[1]
+        if self.useChains:
+            resNum = self.residue.get_parent().id + str(self.residue.id[1])
+        else:
+            resNum = self.residue.id[1]
+        return resNum
 
     def _getOneLetterResidueCode(self):
-        id = self.residue.get_resname().rstrip().lstrip()
-        if not id in Residue.oneLetterResidueCode:
+        resid = self.residue.get_resname().rstrip().lstrip()
+        if not resid in Residue.oneLetterResidueCode:
             return 'X'
         else:
-            return Residue.oneLetterResidueCode[id]
+            return Residue.oneLetterResidueCode[resid]
     
     def __hash__(self):
         return hash(self.resid())
     
     def __eq__(self, other):        
-        if self.useChains:
-            id = self.residue.get_parent().id + str(self.residue.id[1])
-            otherid = other.residue.get_parent().id + str(other.residue.id[1])
-        else:
-            id = self.residue.id[1]
-            otherid = other.residue.id[1]
-        return id == otherid
+        return self.resid() == other.resid()
 
     def __lt__(self, other):        
-        if self.useChains:
-            id = self.residue.get_parent().id + str(self.residue.id[1])
-            otherid = other.residue.get_parent().id + str(other.residue.id[1])
-        else:
-            id = self.residue.id[1]
-            otherid = other.residue.id[1]
-        return id < otherid
+        return self.resNum() < other.resNum()
     
     def __str__(self):
         return self.resid()
             
-
 class Atom():
-    def __init__ (self,at,useChains=False):
+    def __init__ (self, at, useChains=False):
          self.at=at
          self.useChains=useChains
     
@@ -98,16 +90,21 @@ class Atom():
     def resid(self, compact=False):
         return Residue(self.at.get_parent(),self.useChains).resid(compact)
   
+    def resNum(self):
+        return Residue(self.at.get_parent(),self.useChains).resNum()
+
     def attype(self):
         return Residue(self.at.get_parent(),self.useChains)._getOneLetterResidueCode()+'.'+self.at.id
     
-    def _hbscore(self,other):    
-        d = self.at - other.at
-        return 2.6875 - 0.625*d
+    def __lt__(self,other):
+        return self.at.get_serial_number()
     
     def __str__(self):
         return self.atid()
 
+    def _hbscore(self,other):    
+        d = self.at - other.at
+        return 2.6875 - 0.625*d
 
 class BPair():
     def __init__(self,r1,r2,score):
