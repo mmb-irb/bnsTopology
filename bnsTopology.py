@@ -23,17 +23,22 @@ BPTHRESDEF = 1.0
 def sameResidue(at1,at2):
     return at1.get_parent() == at2.get_parent()
 
-def createResiduePair(at1,at2,useChains=False):
+def getOrderedResiduePair(at1,at2,useChains=False):
 # Defining residues as res1 < res2
-    if bnsTopLib.StructureWrapper.Residue(at1.get_parent(),useChains)\
-       < bnsTopLib.StructureWrapper.Residue(at2.get_parent(),useChains):
-        res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
-        res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+    res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
+    res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+    if res1 < res2:
+        return [res1,res2]
     else:
-        res2 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
-        res1 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
-    return [res1,res2]
+        return [res2,res1]
 
+def getOrderedAtomPair(at1,at2,useChains=False):
+    atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains)
+    atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains)
+    if atom1 < atom2:
+        return [atom1,atom2]
+    else:
+        return [atom2,atom1]
 
 def main():
 
@@ -129,8 +134,8 @@ def main():
     for at1, at2 in nbsearch.search_all(COVLNK):
         if sameResidue(at1,at2):
             continue
-        
-        [res1,res2] = createResiduePair(at1,at2,useChains)
+
+        [res1,res2] = getOrderedResiduePair(at1,at2,useChains)
 
         covLinkPairs.add ((res1,res2))
 
@@ -193,26 +198,27 @@ def main():
     for at1, at2 in wc_nbsearch.search_all(HBLNK):
         if sameResidue(at1,at2):
             continue
-# Defining atoms being res1 < res2
-        if bnsTopLib.StructureWrapper.Residue(at1.get_parent(),useChains) < bnsTopLib.StructureWrapper.Residue(at2.get_parent(),useChains):
-            atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains)
-            atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains)
-        else:
-            atom1 = bnsTopLib.StructureWrapper.Atom(at2, useChains)
-            atom2 = bnsTopLib.StructureWrapper.Atom(at1, useChains)
+
+        [atom1,atom2] = getOrderedAtomPair(at1,at2,useChains)
+
         res1 = bnsTopLib.StructureWrapper.Residue(atom1.at.get_parent(),useChains)
         res2 = bnsTopLib.StructureWrapper.Residue(atom2.at.get_parent(),useChains)
-        
+
         if [atom1.attype(), atom2.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC'] and \
            [atom2.attype(), atom1.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC']:
             continue
+
         if (res1,res2) in covLinkPairs:
             continue
+
         if res1 not in nhbs:
             nhbs[res1] = {}
+
         if res2 not in nhbs[res1]:
             nhbs[res1][res2]=0
+
         nhbs[res1][res2]=nhbs[res1][res2]+atom1._hbscore(atom2)
+
         if debug:
             print ("#DEBUG: ", res1,res2,atom1._hbscore(atom2))
 
