@@ -60,7 +60,6 @@ def main():
         help='BP Score min value ('+str(BPTHRESDEF)+')',
         dest='bpthres',
         default = BPTHRESDEF,
-
     )
 
     parser.add_argument('pdb_path')
