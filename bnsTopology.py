@@ -8,11 +8,15 @@ __date__ = "$29-ago-2017 16:14:26$"
 
 from Bio.PDB.NeighborSearch import NeighborSearch
 from Bio.PDB.PDBParser import PDBParser
+from Bio.PDB.MMCIFParser import MMCIFParser
+from Bio.PDB.PDBList import PDBList
 
 import bnsTopLib
 
 import sys
 import argparse
+import urllib
+
 
 
 COVLNK = 2.0
@@ -42,39 +46,39 @@ def getOrderedAtomPair(at1,at2,useChains=False):
 
 def main():
 
-    parser = argparse.ArgumentParser(
+    argparser = argparse.ArgumentParser(
                 prog='bnsTopology',
                 description='Basic topology builder for BNS'
             )
 
-    parser.add_argument(
+    argparser.add_argument(
         '--debug', '-d',
         action='store_true',
         dest='debug',
         help='Produce DEBUG output'
     )
 
-    parser.add_argument(
+    argparser.add_argument(
         '--usechains',
         action='store_true',
         dest='usechains',
         help='Use PDB file chain ids'
     )
 
-    parser.add_argument(
+    argparser.add_argument(
         '--graphml',
         action='store_true',
         dest='graphml',
         help='Produce GraphML output file'
     )
-    parser.add_argument(
+    argparser.add_argument(
         '--json',
         action='store_true',
         dest='json',
         help='Produce Json output file'
     )
 
-    parser.add_argument(
+    argparser.add_argument(
         '--bpthres',
         type = float,
         action='store',
@@ -83,9 +87,9 @@ def main():
         default = BPTHRESDEF,
     )
 
-    parser.add_argument('pdb_path')
+    argparser.add_argument('pdb_path')
 
-    args = parser.parse_args()
+    args = argparser.parse_args()
 
     debug = args.debug
     pdb_path = args.pdb_path
@@ -95,21 +99,45 @@ def main():
     bpthres = args.bpthres
 
     if not pdb_path:
-        parser.print_help()
+        argparser.print_help()
         sys.exit(2)
 
-    parser = PDBParser(PERMISSIVE=1)
-
+    if "pdb:"in pdb_path:
+        pdbl= PDBList(pdb='tmpPDB')
+        print(vars(pdbl))
+        try:
+            pdb_path = pdb_path[4:].upper()
+            pdb_path=pdbl.retrieve_pdb_file(pdb_path)
+            parser = MMCIFParser()
+            useChains=True
+            format='cif'
+            
+        except IOError:
+            print ("#ERROR: fetching PDB "+pdb_path)
+            sys.exit(2)
+    else:
+        try:
+            if '.pdb' in pdb_path:
+                parser = PDBParser(PERMISSIVE=1)
+                format='pdb'
+            elif '.cif' in pdb_path:
+                parser = MMCIFParser(PERMISSIVE=1)
+                format='cif'
+            else:
+                print ('#ERROR: unknown filetype')
+                sys.exit(2)
+        except OSError:
+            print ("#ERROR: loading PDB")
+            sys.exit(2)
     try:
         st = parser.get_structure('st', pdb_path)
     except OSError:
-        print ("#ERROR: loading PDB")
+        print ("#ERROR: parsing PDB")
         sys.exit(2)
-
 # Checking for models
     if len(st) > 1:
         print ("#WARNING: Several Models found, using only first")
-
+    
 # Using Model 0 any way
     st = st[0]
 
@@ -166,7 +194,7 @@ def main():
     print ("#INFO: Residue Ids List")
     i=0
     for s in chList.getSortedChains():
-        print (s.ini,'-',s.fin,':', ','.join(s.getResidueIdList()))
+        print (s.inir,'-',s.finr,':', ','.join(s.getResidueIdList()))
         if graphml:
             for res in s.residues:
                 xml.addResidue(i,res)
@@ -243,7 +271,7 @@ def main():
 
     for bp in sorted(bps):
         print (bp, '(',bp.type,'):',','.join(bp.comps()), '(',str(bp.score),')')
-        bpsref[bp.r1.resNum()]=bp
+        bpsref[bp.r1.resNum]=bp
         if graphml:
             xml.addBond("bp",bp.r1, bp.r2)
 
@@ -254,8 +282,8 @@ def main():
     for bp1 in sorted(bps):
         for bp2 in sorted(bps):
             if bp1 < bp2:
-                if bp1.r1.resNum() == bp2.r1.resNum()-1 and \
-                   bp1.r2.resNum() == bp2.r2.resNum()+1:
+                if bp1.r1.resNum == bp2.r1.resNum-1 and \
+                   bp1.r2.resNum == bp2.r2.resNum+1:
                     bpsteps.append(bnsTopLib.StructureWrapper.BPStep(bp1,bp2))
 
     bpstpref={}

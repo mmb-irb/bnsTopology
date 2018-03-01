@@ -26,26 +26,27 @@ class ChainList():
         self.n = len(self.chains)
 
     def getSortedChains(self):
-        return sorted(self.chains,key=lambda s: int(s.ini))
+        return sorted(self.chains,key=lambda s: s.ini)
 
 
 class Chain():
     def __init__(self):
-        self.ini=0
+        self.ini=99999
         self.fin=0
+        self.inir=''
+        self.finr=''
         self.residues = set()
 
     def add(self,r):
         self.residues.add(r)
-        if self.ini == 0:
-            self.ini = int(r.resNum())
-        else:
-            self.ini = min(self.ini,int(r.resNum()))
-        if self.fin == 0:
-            self.fin = int(r.resNum())
-        else:
-            self.fin = max(self.fin,int(r.resNum()))
-
+        rn=r.__index__()
+        if rn < self.ini:
+            self.ini = rn
+            self.inir = r.chain+str(r.resNum)
+        if rn > self.fin:
+            self.fin = rn
+            self.finr = r.chain+str(r.resNum)
+        
     def union(self,other):
         self.residues = self.residues.union(other.residues)
         self.ini = min(self.ini,other.ini)
@@ -62,15 +63,17 @@ class Chain():
         seq=self._getResidues()
         seql = []
         for i in sorted(seq.keys()):
-            seql.append(str(i)+"-"+seq[i]._getOneLetterResidueCode())
+            seql.append(seq[i].chain+str(seq[i].resNum)+"-"+seq[i]._getOneLetterResidueCode())
         return seql
 
     def _getResidues(self):
         seq={}
         for r in self.residues:
-            seq[r.resNum()] = r
+            seq[r.__index__()] = r
         #print (seq)
         return seq
     def __str__(self):
-        return str(self.ini) + "-" + str(self.fin)+ ":" + self.getSequence()
+        return str(self.inir) + "-" + str(self.finr)+ ":" + self.getSequence()
+    
 
+   

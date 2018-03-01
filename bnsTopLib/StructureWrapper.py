@@ -39,26 +39,21 @@ class Residue():
     def __init__(self, r, useChains=False):
         self.residue = r
         self.useChains = useChains
+        self.chain = r.get_parent().id
+        self.resNum = int(self.residue.id[1])
 
     def resid(self, compact=False):
         if self.useChains:
-            ch = ":"+self.residue.get_parent().id
+            ch = ":"+self.chain
         else:
             ch = ''
         if compact:
-            return self._getOneLetterResidueCode() + ch + str(self.residue.id[1])
+            return self._getOneLetterResidueCode() + ch + str(self.resNum)
         else:
-            return self.residue.get_resname() + ch + ':'+ str(self.residue.id[1])
+            return self.residue.get_resname() + ch + ':'+ str(self.resNum)
 
     def bnsid(self):
-        return str(self.resNum())+"-"+self._getOneLetterResidueCode()
-
-    def resNum(self):
-        if self.useChains:
-            resNum = self.residue.get_parent().id + str(self.residue.id[1])
-        else:
-            resNum = self.residue.id[1]
-        return resNum
+        return self.chain+str(self.resNum)+"-"+self._getOneLetterResidueCode()
 
     def _getOneLetterResidueCode(self):
         resid = self.residue.get_resname().rstrip().lstrip()
@@ -74,10 +69,20 @@ class Residue():
         return self.resid() == other.resid()
 
     def __lt__(self, other):
-        return self.resNum() < other.resNum()
+        if self.chain != other.chain:
+            return self.chain < other.chain
+        else:
+            return self.resNum < other.resNum
 
     def __str__(self):
         return self.resid()
+    
+    def __index__(self):
+        if self.useChains:
+            return ord(self.chain)*1000 + int(self.resNum)
+        else:
+            return self.resNum
+    
 
 class Atom():
     def __init__ (self, at, useChains=False):
@@ -115,7 +120,7 @@ class BPair():
         self.score=score
 
     def bpid(self):
-        return str(self.r1.resNum()) + "-" \
+        return self.r1.chain + str(self.r1.resNum) + "-" \
             + self.r1._getOneLetterResidueCode() \
             + self.r2._getOneLetterResidueCode()
 
@@ -143,7 +148,7 @@ class BPStep():
         self.type= ''.join(sorted(bps))
 
     def stepid(self):
-        return str(self.bp1.r1.resNum()) + "-" \
+        return str(self.bp1.r1.resNum) + "-" \
             + self.bp1.r1._getOneLetterResidueCode() \
             + self.bp2.r1._getOneLetterResidueCode() \
             + self.bp2.r2._getOneLetterResidueCode() \
@@ -153,7 +158,7 @@ class BPStep():
         return [self.bp1.bpid(),self.bp2.bpid()]
 
     def resNum(self):
-        return self.bp1.r1.resNum()
+        return self.bp1.r1.resNum
 
     def __eq__(self,other):
         return self.bp1==other.bp1 and self.bp2 == other.bp2
