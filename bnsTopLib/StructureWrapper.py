@@ -55,13 +55,29 @@ class Residue():
     def bnsid(self):
         return self.chain+str(self.resNum)+"-"+self._getOneLetterResidueCode()
 
+    def getClosestContact(self,other,limd):
+        dr=10000.
+        for at1 in self.residue.get_list():
+            for at2 in other.residue.get_list():
+                if at1.element not in ['N','O','S'] or at2.element not in ['N','O','S']:
+                    continue
+                d = at1-at2
+                if d <= limd and d < dr:
+                    dr=d
+                    at1r = at1
+                    at2r = at2
+        if dr >= 9999.:
+            return []
+        else:
+            return [at1r,at2r,dr]
+
     def _getOneLetterResidueCode(self):
         resid = self.residue.get_resname().rstrip().lstrip()
         if not resid in Residue.oneLetterResidueCode:
             return 'X'
         else:
             return Residue.oneLetterResidueCode[resid]
-
+    
     def __hash__(self):
         return hash(self.resid())
 

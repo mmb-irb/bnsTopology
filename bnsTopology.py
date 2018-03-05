@@ -71,6 +71,7 @@ def main():
         dest='graphml',
         help='Produce GraphML output file'
     )
+
     argparser.add_argument(
         '--json',
         action='store_true',
@@ -86,6 +87,13 @@ def main():
         dest='bpthres',
         default = BPTHRESDEF,
     )
+    
+    argparser.add_argument(
+        '--contacts',
+        action='store_true',
+        dest='contacts',
+        help='Calculate polar contacts between chains'
+    )
 
     argparser.add_argument('pdb_path')
 
@@ -97,6 +105,7 @@ def main():
     graphml = args.graphml
     json = args.json
     bpthres = args.bpthres
+    contacts = args.contacts
 
     if not pdb_path:
         argparser.print_help()
@@ -104,7 +113,6 @@ def main():
 
     if "pdb:"in pdb_path:
         pdbl= PDBList(pdb='tmpPDB')
-        print(vars(pdbl))
         try:
             pdb_path = pdb_path[4:].upper()
             pdb_path=pdbl.retrieve_pdb_file(pdb_path)
@@ -129,15 +137,15 @@ def main():
             print ("#ERROR: loading PDB")
             sys.exit(2)
     try:
-            if '.pdb' in pdb_path:
-                parser = PDBParser(PERMISSIVE=1)
-                format='pdb'
-            elif '.cif' in pdb_path:
-                parser = MMCIFParser(PERMISSIVE=1)
-                format='cif'
-            else:
-                print ('#ERROR: unknown filetype')
-                sys.exit(2)
+        if '.pdb' in pdb_path:
+            parser = PDBParser(PERMISSIVE=1)
+            format='pdb'
+        elif '.cif' in pdb_path:
+            parser = MMCIFParser()
+            format='cif'
+        else:
+            print ('#ERROR: unknown filetype')
+            sys.exit(2)
     except OSError:
         print ("#ERROR: parsing PDB")
         sys.exit(2)
@@ -234,6 +242,28 @@ def main():
     if graphml:
         for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
             xml.addBond('ch',r[0],r[1])
+# Contacts
+    if contacts:
+        print ("#INFO: Getting interchain contacts")
+        conts={}
+        for ch1 in chList.getSortedChains():
+            conts[ch1]={}
+            for ch2 in chList.getSortedChains():
+                if ch2.ini <= ch1.ini:
+                    continue
+                conts[ch1][ch2]=[]
+                ats1 = []
+                s1 = ch1._getResidues()
+                s2 = ch2._getResidues()
+                for r1 in s1:
+                    for r2 in s2:
+                        cont = s1[r1].getClosestContact(s2[r2],HBLNK)
+                        if cont:
+                            [at1,at2,d] = cont
+                            [atom1,atom2] = getOrderedAtomPair(at1,at2,useChains)
+                            print (atom1.atid(True), atom2.atid(True),d)
+                            conts[ch1][ch2].append([atom1,atom2,d])
+                
 
 
 #Base Pairs
