@@ -67,14 +67,12 @@ def main():
 
     argparser.add_argument(
         '--graphml',
-        action='store_true',
         dest='graphml',
         help='Produce GraphML output file'
     )
 
     argparser.add_argument(
         '--json',
-        action='store_true',
         dest='json',
         help='Produce Json output file'
     )
@@ -179,6 +177,15 @@ def main():
             at.serial_number = i
             i=i+1
 
+# json output
+    if json:
+        jsondata = bnsTopLib.JSONWriter.JSONWriter()
+        JSchainData = {}
+        JScovLinks=[]
+        JSContacts=[]
+        JSbps=[]
+        JShelFrags=[]
+        
 
 # Graphml output
     if graphml:
@@ -222,8 +229,16 @@ def main():
             for s in chList.getSortedChains():
                 print ("#DEBUG:" ,s)
     print ("#INFO: Found ",chList.n," chain(s)")
+    if json:
+        JSchainData['nOfChains']=chList.n
+        JSchainData['chains'] = []
+        
     for s in chList.getSortedChains():
         print (s)
+        if json:
+            JSchainData['chains'].append({'iniRes' : str(s.inir), 'finRes' : str(s.finr), 'sequence' : s.getSequence()})
+    if json:
+        jsondata.insert('chains',JSchainData)
 
 # Nucleotide list
     print ("#INFO: Residue Ids List")
@@ -242,6 +257,10 @@ def main():
     if graphml:
         for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
             xml.addBond('ch',r[0],r[1])
+    if json:
+        for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
+            JScovLinks.append([r[0].resid(True),r[1].resid(True)])
+        jsondata.insert('covLinks',JScovLinks)
 # Contacts
     if contacts:
         print ("#INFO: Getting interchain contacts")
@@ -263,8 +282,11 @@ def main():
                             [atom1,atom2] = getOrderedAtomPair(at1,at2,useChains)
                             print (atom1.atid(True), atom2.atid(True),d)
                             conts[ch1][ch2].append([atom1,atom2,d])
+                            if json:
+                                JSContacts.append({'ats':[atom1.atid(True), atom2.atid(True)],'distance':float(d)})
                 
-
+        if json:
+            jsondata.insert('contacts',JSContacts)
 
 #Base Pairs
     print ("#INFO: Base pairs found")
@@ -331,12 +353,16 @@ def main():
         bpsref[bp.r1.residue.index]=bp
         if graphml:
             xml.addBond("bp",bp.r1, bp.r2)
+        if json:
+            JSbps.append({'id': bp.bpid(),'type':bp.type,'score':float(bp.score), 'comps':bp.compsIds()})
+    if json:
+        jsondata.insert('bpList',JSbps)
 
 # Bpair steps from neighbour bps, relays on residue renumbering
     print ("#INFO: Base Pair steps")
 
     bpsteps=[]
-    for bp1 in sorted(bps):
+    for bp1 in sorted(bps):        
         for bp2 in sorted(bps):
             if bp1 < bp2:
                 if bp1.r1.residue.index == bp2.r1.residue.index-1 and \
@@ -344,10 +370,15 @@ def main():
                     bpsteps.append(bnsTopLib.StructureWrapper.BPStep(bp1,bp2))
 
     bpstpref={}
+    if json:
+        JSbpsteps=[]
     for bpstp in sorted(bpsteps):
         print (bpstp, '(',bpstp.type,'):', ','.join(bpstp.compsIds()))
         bpstpref[bpstp.bp1.r1.residue.index]=bpstp
-
+        if json:
+            JSbpsteps.append({'id':bpstp.stepid(),'type':bpstp.type,'comps':bpstp.compsIds()})
+    if json:
+        jsondata.insert('bpStepsList',JSbpsteps)
 # Continuous helical segments from stretches of overlapping bsteps
     print ("#INFO: Helical segments")
 
@@ -376,7 +407,7 @@ def main():
                         fragList.chains[i].add(bpst2)
                     elif i == -1:
                         fragList.chains[j].add(bpst1)
-
+    
     for fr in fragList.getSortedChains():
         frag={}
         for i in range (fr.ini,fr.fin+1):
@@ -386,9 +417,14 @@ def main():
         for bp in sorted(frag.keys(), key=bnsTopLib.StructureWrapper.BPair.__index__):
            seq.append(bp.bpid())
         print (','.join(seq))
-
+        if json:
+            JShelFrags.append(seq)
+    if json:
+        jsondata.insert('HelicalFrags',JShelFrags)
     if graphml:
-        xml.save("output.graphml")
-
+        xml.save(graphml)
+    if json:
+        jsondata.save(json)
+        
 if __name__ == "__main__":
     main()
