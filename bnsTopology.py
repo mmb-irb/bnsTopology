@@ -15,6 +15,8 @@ import bnsTopLib
 
 import sys
 import argparse
+import urllib
+
 
 
 COVLNK = 2.0
@@ -109,11 +111,23 @@ def main():
             parser = MMCIFParser()
             useChains=True
             format='cif'
-
         except IOError:
             print ("#ERROR: fetching PDB "+pdb_path)
             sys.exit(2)
     else:
+        try:
+            if '.pdb' in pdb_path:
+                parser = PDBParser(PERMISSIVE=1)
+                format='pdb'
+            elif '.cif' in pdb_path:
+                parser = MMCIFParser(PERMISSIVE=1)
+                format='cif'
+            else:
+                print ('#ERROR: unknown filetype')
+                sys.exit(2)
+        except OSError:
+            print ("#ERROR: loading PDB")
+            sys.exit(2)
     try:
             if '.pdb' in pdb_path:
                 parser = PDBParser(PERMISSIVE=1)
@@ -125,7 +139,7 @@ def main():
                 print ('#ERROR: unknown filetype')
                 sys.exit(2)
     except OSError:
-        print ("#ERROR: loading PDB")
+        print ("#ERROR: parsing PDB")
         sys.exit(2)
     try:
         st = parser.get_structure('st', pdb_path)
@@ -135,14 +149,29 @@ def main():
 # Checking for models
     if len(st) > 1:
         print ("#WARNING: Several Models found, using only first")
-
+    
 # Using Model 0 any way
     st = st[0]
 
 #Checking for chain ids in input
     if not useChains and len(st) > 1:
         print ("#WARNING: Input PDB contains more than one chain ids ",\
-               "when chains ids not used, consider renumbering or ")
+               "when chains ids not used, consider renumbering ")
+
+####### Internal renumbering 
+
+    if useChains:
+        i=1
+        for r in st.get_residues():
+           r.index = i
+           i=i+1
+    if format == 'cif':
+        i=1
+        for at in st.get_atoms():
+            at.serial_number = i
+            i=i+1
+
+
 # Graphml output
     if graphml:
         xml = bnsTopLib.graphml.GraphmlWriter()
@@ -192,18 +221,18 @@ def main():
     print ("#INFO: Residue Ids List")
     i=0
     for s in chList.getSortedChains():
-        print (s.ini,'-',s.fin,':', ','.join(s.getResidueIdList()))
+        print (s.inir,'-',s.finr,':', ','.join(s.getResidueIdList()))
         if graphml:
-            for res in s.residues:
+            for res in s.items:
                 xml.addResidue(i,res)
         i=i+1
 
     if debug:
         print ("#DEBUG: covalently linked residue pairs")
-        for r in sorted(covLinkPairs, key=lambda i: i[0].resNum()):
+        for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
             print ("#DEBUG: ",r[0].resid(),r[1].resid())
     if graphml:
-        for r in sorted(covLinkPairs, key=lambda i: i[0].resNum()):
+        for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
             xml.addBond('ch',r[0],r[1])
 
 
@@ -268,8 +297,8 @@ def main():
     bpsref={}
 
     for bp in sorted(bps):
-        print (bp, '(',bp.type,'):',','.join(bp.comps()), '(',str(bp.score),')')
-        bpsref[bp.r1.resNum()]=bp
+        print (bp, '(',bp.type,'):',','.join(bp.compsIds()), '(',str(bp.score),')')
+        bpsref[bp.r1.residue.index]=bp
         if graphml:
             xml.addBond("bp",bp.r1, bp.r2)
 
@@ -280,14 +309,14 @@ def main():
     for bp1 in sorted(bps):
         for bp2 in sorted(bps):
             if bp1 < bp2:
-                if bp1.r1.resNum() == bp2.r1.resNum()-1 and \
-                   bp1.r2.resNum() == bp2.r2.resNum()+1:
+                if bp1.r1.residue.index == bp2.r1.residue.index-1 and \
+                   bp1.r2.residue.index == bp2.r2.residue.index+1:
                     bpsteps.append(bnsTopLib.StructureWrapper.BPStep(bp1,bp2))
 
     bpstpref={}
     for bpstp in sorted(bpsteps):
-        print (bpstp, '(',bpstp.type,'):', ','.join(bpstp.comps()))
-        bpstpref[bpstp.resNum()]=bpstp
+        print (bpstp, '(',bpstp.type,'):', ','.join(bpstp.compsIds()))
+        bpstpref[bpstp.bp1.r1.residue.index]=bpstp
 
 # Continuous helical segments from stretches of overlapping bsteps
     print ("#INFO: Helical segments")
@@ -297,16 +326,16 @@ def main():
     for bpst1 in sorted(bpsteps):
         i = fragList.find(bpst1)
         if i == -1:
-            s = bnsTopLib.Chains.Chain()
+            s = bnsTopLib.Chains.BPChain()
             s.add(bpst1)
             fragList.append(s)
         for bpst2 in sorted(bpsteps):
             if bpst1 < bpst2:
-                if bpst1.bp1.r1.resNum() == bpst2.bp1.r1.resNum()-1:
+                if bpst1.bp1.r1.residue.index == bpst2.bp1.r1.residue.index-1:
                     i = fragList.find(bpst1)
                     j = fragList.find(bpst2)
                     if i == -1 and j == -1:
-                        s = bnsTopLib.Chains.Chain()
+                        s = bnsTopLib.Chains.BPChain()
                         s.add(bpst2)
                         s.add(bpst1)
                         fragList.append(s)
@@ -323,7 +352,10 @@ def main():
         for i in range (fr.ini,fr.fin+1):
             for bb in bpstpref[i].comps():
                 frag[bb]=1
-        print (",".join(sorted(frag.keys())))
+        seq=[]
+        for bp in sorted(frag.keys(), key=bnsTopLib.StructureWrapper.BPair.__index__):
+           seq.append(bp.bpid())
+        print (','.join(seq))
 
     if graphml:
         xml.save("output.graphml")
