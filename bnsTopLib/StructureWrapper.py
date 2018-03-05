@@ -69,17 +69,14 @@ class Residue():
         return self.resid() == other.resid()
 
     def __lt__(self, other):
-        if self.chain != other.chain:
-            return self.chain < other.chain
-        else:
-            return self.resNum < other.resNum
+        return self.residue.index < other.residue.index
 
     def __str__(self):
         return self.resid()
     
     def __index__(self):
         if self.useChains:
-            return ord(self.chain)*1000 + int(self.resNum)
+            return self.residue.index
         else:
             return self.resNum
     
@@ -125,7 +122,10 @@ class BPair():
             + self.r2._getOneLetterResidueCode()
 
     def comps(self):
-        return [self.r1.bnsid(),self.r2.bnsid()]
+        return [self.r1,self.r2]
+
+    def compsIds(self):
+        return [self.r1.resid(True),self.r2.resid(True)]
 
     def __eq__(self,other):
         return self.r1==other.r1 and self.r2 == other.r2
@@ -135,6 +135,12 @@ class BPair():
 
     def __str__(self):
         return self.bpid()
+    
+    def __hash__(self):
+        return hash(self.bpid())
+    
+    def __index__(self):
+        return self.r1.residue.index
 
 
 class BPStep():
@@ -148,15 +154,18 @@ class BPStep():
         self.type= ''.join(sorted(bps))
 
     def stepid(self):
-        return str(self.bp1.r1.resNum) + "-" \
+        return self.bp1.r1.chain + str(self.bp1.r1.resNum) + "-" \
             + self.bp1.r1._getOneLetterResidueCode() \
             + self.bp2.r1._getOneLetterResidueCode() \
             + self.bp2.r2._getOneLetterResidueCode() \
             + self.bp1.r2._getOneLetterResidueCode()
 
     def comps(self):
+        return [self.bp1,self.bp2]
+    
+    def compsIds(self):
         return [self.bp1.bpid(),self.bp2.bpid()]
-
+    
     def resNum(self):
         return self.bp1.r1.resNum
 
@@ -171,3 +180,6 @@ class BPStep():
 
     def __hash__(self):
         return hash(self.stepid())
+    
+    def __index__(self):
+        return self.bp1.r1.residue.index
