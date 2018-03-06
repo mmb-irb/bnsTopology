@@ -5,6 +5,7 @@ from Bio.PDB.PDBList import PDBList
 
 class PDBLoader():
     def __init__(self, pdb_path):
+        self.useChains=False
         if "pdb:"in pdb_path:
             pdbl= PDBList(pdb='tmpPDB')
             try:
@@ -34,4 +35,24 @@ class PDBLoader():
         except OSError:
             print ("#ERROR: parsing PDB")
             sys.exit(2)
+        #====== Internal residue renumbering =========================================
+        i=1
+        for r in st.get_residues():
+            r.index = i
+            i=i+1
+        #Atom renumbering for mmCIF, 
+        if self.format == 'cif':
+            i=1
+            for at in st.get_atoms():
+                at.serial_number = i
+                if hasattr(at,'selected_child'):
+                    at.selected_child.serial_number=i
+                i=i+1
+# Checking for models
+        if len(st) > 1:
+            print ("#WARNING: Several Models found, using only first")
+# Using Model 0 any way TODO: revise for bioiunits
+        st = st[0]
+
+
         return st

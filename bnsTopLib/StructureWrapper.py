@@ -39,7 +39,10 @@ class Residue():
     def __init__(self, r, useChains=False):
         self.residue = r
         self.useChains = useChains
-        self.chain = r.get_parent().id
+        if self.useChains:
+            self.chain = r.get_parent().id
+        else:
+            self.chain =''
         self.resNum = int(self.residue.id[1])
 
     def resid(self, compact=False):
