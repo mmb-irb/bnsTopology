@@ -41,11 +41,10 @@ def getOrderedAtomPair(at1,at2,useChains=False):
 
 def main():
 
-    args = bnsTopLib.cmdLine({'BPTHRESDEF': BPTHRESDEF}).parse_args()
+    args = bnsTopLib.cmdLine({'BPTHRESDEF': BPTHRESDEF, 'INTDIST':INTDIST}).parse_args()
 # json output
     if args.json:
-        jsondata = bnsTopLib.JSONWriter()
-        jsondata.data['intdist']= INTDIST
+        jsondata = bnsTopLib.JSONWriter()        
 # Graphml output
     if args.graphml:
         xml = bnsTopLib.GraphmlWriter()
@@ -114,8 +113,9 @@ def main():
         for r in sorted(covLinkPairs, key=lambda i: i[0].residue.index):
             jsondata.data['covLinks'].append([r[0].resid(True),r[1].resid(True)])
 # Contacts & interfaces
-    if args.contacts:
-        print ("#INFO: Getting interchain contacts")
+    if args.contacts or args.interface:
+        if args.contacts:
+            print ("#INFO: Getting interchain contacts")
         conts={}
         intList={}
         interfPairs={}
@@ -134,12 +134,12 @@ def main():
                 s2 = ch2._getResidues()
                 for r1 in s1:
                     for r2 in s2:
-                        cont = s1[r1].getClosestContact(s2[r2],INTDIST)
+                        cont = s1[r1].getClosestContact(s2[r2],args.intdist)
                         if cont:
                             [at1,at2,d] = cont
                             [atom1,atom2] = getOrderedAtomPair(at1,at2,args.useChains)
                             [res1,res2] = getOrderedResiduePair(at1,at2,args.useChains)
-                            if d <= HBLNK:
+                            if args.contacts and d <= HBLNK:
                                 print ("#CT ", atom1.atid(True), atom2.atid(True),d)
                                 conts[ch1][ch2].append([atom1,atom2,d])
                                 if args.json:
@@ -147,15 +147,16 @@ def main():
                                 interfPairs[ch1][ch2].append([res1,res2])
                 intList[ch1][ch2] = bnsTopLib.ResidueSet.ResidueSetList(interfPairs[ch1][ch2])
         
-        print ("#INFO: Interface residues at "+ str(INTDIST) +"A")
-        for ch1 in chList.getSortedSets():
-            for ch2 in chList.getSortedSets():
-                if ch2.ini <= ch1.ini:
-                    continue
-                for s in intList[ch1][ch2].getSortedSets():
-                    print ("#INTRES ", ','.join(s.getResidueIdList()))
-                    if args.json:
-                        jsondata.data['interfaces'].append(','.join(s.getResidueIdList()))
+        if args.interface:
+            print ("#INFO: Interface residues at "+ str(args.intdist) +"A")
+            for ch1 in chList.getSortedSets():
+                for ch2 in chList.getSortedSets():
+                    if ch2.ini <= ch1.ini:
+                        continue
+                    for s in intList[ch1][ch2].getSortedSets():
+                        print ("#INTRES ", ','.join(s.getResidueIdList()))
+                        if args.json:
+                            jsondata.data['interfaces'].append(','.join(s.getResidueIdList()))
                 
 #Base Pairs
     print ("#INFO: Base pairs found")

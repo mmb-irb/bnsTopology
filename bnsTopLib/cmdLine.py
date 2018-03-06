@@ -49,6 +49,22 @@ class cmdLine():
             dest='contacts',
             help='Calculate polar contacts between chains'
         )
+        
+        self.argparser.add_argument(
+            '--interface',
+            action='store_true',
+            dest='interface',
+            help='Determine interface residues within a distance cutoffCalculate polar contacts between chains'
+        )
+        
+        self.argparser.add_argument(
+            '--intdist',
+            type = float,
+            action='store',
+            help='Interface distance cutoff ('+str(defaults['INTDIST'])+')',
+            dest='intdist',
+            default = defaults['INTDIST'],
+        )
 
         self.argparser.add_argument('pdb_path')
 

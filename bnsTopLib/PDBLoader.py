@@ -3,6 +3,8 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBList import PDBList
 
+import sys
+
 class PDBLoader():
     def __init__(self, pdb_path):
         self.useChains=False
