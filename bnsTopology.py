@@ -199,41 +199,21 @@ def main():
 
     nbsearch = NeighborSearch(bckats)
 
-    covLinkPairs = set()
-    chList = bnsTopLib.Chains.ChainList()
+    covLinkPairs = []
+
     for at1, at2 in nbsearch.search_all(COVLNK):
         if sameResidue(at1,at2):
             continue
+        covLinkPairs.append (getOrderedResiduePair(at1,at2,useChains))
 
-        [res1,res2] = getOrderedResiduePair(at1,at2,useChains)
-
-        covLinkPairs.add ((res1,res2))
-
-        i = chList.find(res1)
-        j = chList.find(res2)
-
-        if i == -1 and j == -1:
-            s = bnsTopLib.Chains.Chain()
-            s.add(res1)
-            s.add(res2)
-            chList.append(s)
-        elif i != -1 and j != -1 and i != j:
-            chList.chains[i].union(chList.chains[j])
-            chList.delete(j)
-        elif j == -1:
-            chList.chains[i].add(res2)
-        elif i == -1:
-            chList.chains[j].add(res1)
-
-        if debug:
-            for s in chList.getSortedChains():
-                print ("#DEBUG:" ,s)
+    chList = bnsTopLib.ResidueSet.ResidueSetList(covLinkPairs)
+    
     print ("#INFO: Found ",chList.n," chain(s)")
     if json:
         JSchainData['nOfChains']=chList.n
         JSchainData['chains'] = []
         
-    for s in chList.getSortedChains():
+    for s in chList.getSortedSets():
         print (s)
         if json:
             JSchainData['chains'].append({'iniRes' : str(s.inir), 'finRes' : str(s.finr), 'sequence' : s.getSequence()})
@@ -243,7 +223,7 @@ def main():
 # Nucleotide list
     print ("#INFO: Residue Ids List")
     i=0
-    for s in chList.getSortedChains():
+    for s in chList.getSortedSets():
         print (s.inir,'-',s.finr,':', ','.join(s.getResidueIdList()))
         if graphml:
             for res in s.items:
@@ -382,33 +362,16 @@ def main():
 # Continuous helical segments from stretches of overlapping bsteps
     print ("#INFO: Helical segments")
 
-    fragList=bnsTopLib.Chains.ChainList()
-
+    bpstepPairs=[]
     for bpst1 in sorted(bpsteps):
-        i = fragList.find(bpst1)
-        if i == -1:
-            s = bnsTopLib.Chains.BPChain()
-            s.add(bpst1)
-            fragList.append(s)
         for bpst2 in sorted(bpsteps):
             if bpst1 < bpst2:
                 if bpst1.bp1.r1.residue.index == bpst2.bp1.r1.residue.index-1:
-                    i = fragList.find(bpst1)
-                    j = fragList.find(bpst2)
-                    if i == -1 and j == -1:
-                        s = bnsTopLib.Chains.BPChain()
-                        s.add(bpst2)
-                        s.add(bpst1)
-                        fragList.append(s)
-                    elif i != -1 and j != -1 and i != j:
-                        fragList.chains[i].union(fragList.chains[j])
-                        fragList.delete(j)
-                    elif j == -1:
-                        fragList.chains[i].add(bpst2)
-                    elif i == -1:
-                        fragList.chains[j].add(bpst1)
-    
-    for fr in fragList.getSortedChains():
+                    bpstepPairs.append([bpst1,bpst2])
+
+    fragList=bnsTopLib.ResidueSet.BPSSetList(bpstepPairs)
+   
+    for fr in fragList.getSortedSets():
         frag={}
         for i in range (fr.ini,fr.fin+1):
             for bb in bpstpref[i].comps():

@@ -1,4 +1,4 @@
 import bnsTopLib.StructureWrapper
-import bnsTopLib.Chains
+import bnsTopLib.ResidueSet
 import bnsTopLib.graphml
 import bnsTopLib.JSONWriter

@@ -1,16 +1,35 @@
-# To change this license header, choose License Headers in Project Properties.
-# To change this template file, choose Tools | Templates
-# and open the template in the editor.
 
 
-class ChainList():
-    def __init__(self):
-        self.chains=[]
+class ResidueSetList():
+    def __init__(self, pairsList=None, debug=False):
+        self.sets=[]
         self.n=0
+        if (pairsList):
+            self.addData(pairsList,debug)
 
+    def addData(self, pairsList, debug=False):
+        for [res1,res2] in pairsList:        
+            i = self.find(res1)
+            j = self.find(res2)
+            if i == -1 and j == -1:
+                s = ResidueSet()
+                s.add(res1)
+                s.add(res2)
+                self.append(s)
+            elif i != -1 and j != -1 and i != j:
+                self.sets[i].union(self.sets[j])
+                self.delete(j)
+            elif j == -1:
+                self.sets[i].add(res2)
+            elif i == -1:
+                self.sets[j].add(res1)
+            if debug:
+                for s in self.getSortedSets():
+                    print ("#DEBUG:" ,s)
+    
     def find(self,item):
         i = 0
-        while i < self.n and item not in self.chains[i].items:
+        while i < self.n and item not in self.sets[i].items:
             i = i + 1
         if i == self.n:
             return -1
@@ -18,17 +37,17 @@ class ChainList():
             return i
 
     def append(self,item):
-        self.chains.append(item)
-        self.n = len(self.chains)
+        self.sets.append(item)
+        self.n = len(self.sets)
 
     def delete(self,i):
-        del self.chains[i]
-        self.n = len(self.chains)
+        del self.sets[i]
+        self.n = len(self.sets)
 
-    def getSortedChains(self):
-        return sorted(self.chains,key=lambda s: s.ini)
+    def getSortedSets(self):
+        return sorted(self.sets,key=lambda s: s.ini)
 
-class Chain():
+class ResidueSet():
     def __init__(self):
         self.ini=999999
         self.fin=0
@@ -80,7 +99,28 @@ class Chain():
         return str(self.inir) + "-" + str(self.finr)+ ":" + self.getSequence()
     
 
-class BPChain (Chain):
+class BPSSetList (ResidueSetList):
+    def addData(self, pairsList, debug=False):
+        for [res1,res2] in pairsList:        
+            i = self.find(res1)
+            j = self.find(res2)
+            if i == -1 and j == -1:
+                s = BPSSet()
+                s.add(res1)
+                s.add(res2)
+                self.append(s)
+            elif i != -1 and j != -1 and i != j:
+                self.sets[i].union(self.sets[j])
+                self.delete(j)
+            elif j == -1:
+                self.sets[i].add(res2)
+            elif i == -1:
+                self.sets[j].add(res1)
+            if debug:
+                for s in self.getSortedSets():
+                    print ("#DEBUG:" ,s)
+    
+class BPSSet (ResidueSet):
     def add(self,bpst):
         self.items.add(bpst)
         rn=bpst.bp1.r1.residue.index
@@ -95,7 +135,6 @@ class BPChain (Chain):
         seq=self._getResidues()
         ss=''
         for i in sorted(seq.keys()):
-            print (seq[i].bp1)
             ss=ss+seq[i].bp1.bpid()+","
         return ss
     
