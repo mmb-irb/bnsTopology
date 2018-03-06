@@ -1,4 +1,6 @@
+from bnsTopLib.cmdLine import cmdLine
+from bnsTopLib.PDBLoader import PDBLoader
 import bnsTopLib.StructureWrapper
 import bnsTopLib.ResidueSet
-import bnsTopLib.graphml
-import bnsTopLib.JSONWriter
+from bnsTopLib.graphml import GraphmlWriter
+from bnsTopLib.JSONWriter import JSONWriter
