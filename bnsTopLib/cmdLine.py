@@ -9,6 +9,12 @@ class cmdLine():
         )
 
         self.argparser.add_argument(
+            '--id',
+            action='store',
+            dest='id',
+            help='PDB Id (for output)'
+        )
+        self.argparser.add_argument(
             '--debug', '-d',
             action='store_true',
             dest='debug',

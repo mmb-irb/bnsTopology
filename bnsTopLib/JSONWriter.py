@@ -3,19 +3,16 @@ import json
 
 class JSONWriter:
     def __init__(self):
-        self.data = {
-            'id':'',
-            'useChains':'',
-            'NOfChains':0, 
-            'chains':[],
-            'covLinks' : [],
-            'contacts' : [],
-            'interfaces': [],
-            'bpList': [],
-            'bpStepList' : [],
-            'HelicalFrags': []
-        }
-         
+        self.data = {}
+    
+    def set(self,k,v):
+        self.data[k]=v
+        
+    def appendData(self, ar, v):
+        if ar not in self.data:
+            self.data[ar]=[]
+        self.data[ar].append(v)
+        
     def __str__(self):
         return json.JSONEncoder(sort_keys=True, indent=1).encode(self.data)
         

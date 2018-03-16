@@ -12,6 +12,7 @@ class PDBLoader():
             pdbl= PDBList(pdb='tmpPDB')
             try:
                 pdb_path = pdb_path[4:].upper()
+                self.id=pdb_path
                 self.pdb_path=pdbl.retrieve_pdb_file(pdb_path)
                 self.parser = MMCIFParser()
                 self.useChains=True

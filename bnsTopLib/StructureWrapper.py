@@ -152,14 +152,25 @@ class BPair():
     def __lt__(self,other):
         return self.r1<other.r1
 
-    def __str__(self):
-        return self.bpid()
+    def __str__(self,mode=0):
+        if mode==0:
+            return self.bpid()
+        elif mode==1:
+            return '%6s (%2s): %12s (%6.4f)' % (self.bpid(), self.type,','.join(self.compsIds()), self.score)
     
     def __hash__(self):
         return hash(self.bpid())
     
     def __index__(self):
         return self.r1.residue.index
+
+    def json(self):
+        return  {
+                    'id': self.bpid(),
+                    'type':self.type,
+                    'score':float(self.score), 
+                    'comps':self.compsIds()
+                }
 
 
 class BPStep():
@@ -194,11 +205,21 @@ class BPStep():
     def __lt__(self,other):
         return self.bp1<other.bp1
 
-    def __str__(self):
-      return self.stepid()
+    def __str__(self,mode=0):
+        if mode==0:
+            return self.stepid()
+        elif mode==1:
+            return '%10s (%4s): %s'% (self.stepid(), self.type,','.join(self.compsIds()))
 
     def __hash__(self):
         return hash(self.stepid())
     
     def __index__(self):
         return self.bp1.r1.residue.index
+    
+    def json(self):
+        return {
+            'id':self.stepid(),
+            'type':self.type,
+            'comps':self.compsIds()
+        }

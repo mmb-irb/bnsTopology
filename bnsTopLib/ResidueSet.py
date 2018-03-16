@@ -7,7 +7,14 @@ class ResidueSetList():
         self.n=0
         if (pairsList):
             self.addData(pairsList,debug)
+            self.addMeta()
 
+    def addMeta(self):
+        chnum=1
+        for s in self.getSortedSets():
+            s.setMeta(chnum)
+            chnum=chnum+1
+        
     def addData(self, pairsList, debug=False):
         for [res1,res2] in pairsList:        
             i = self.find(res1)
@@ -47,6 +54,7 @@ class ResidueSetList():
 
     def getSortedSets(self):
         return sorted(self.sets,key=lambda s: s.ini)
+    
 
 class ResidueSet():
     def __init__(self):
@@ -57,7 +65,14 @@ class ResidueSet():
         self.items = set()
         self.type=''
         self.id=''
-
+    
+    def setMeta(self,id):
+        if self.isProtein():
+            self.type='prot'
+        else:
+            self.type='na'
+        self.id=id
+        
     def add(self,r):
         self.items.add(r)
         rn=r.__index__()
@@ -106,8 +121,23 @@ class ResidueSet():
         #print (seq)
         return seq
     
-    def __str__(self):
-        return str(self.id) + ": " +str(self.inir) +  "-" + str(self.finr)+ "("+self.type+"):" + self.getSequence()
+    def __str__(self, mode=0):
+        
+        if mode == 0:
+            return '%(id)s %(inir)s-%(finr)s (%(type)s):' % vars(self) + self.getSequence()
+        elif mode == 1:
+            return '%(id)s (%(inir)s-%(finr)s):' % vars(self) + ','.join(self.getResidueIdList())
+        else:
+            return ''
+    
+    def json(self):
+        return  {
+            'id': self.id,
+            'iniRes' : str(self.inir), 
+            'finRes' : str(self.finr), 
+            'sequence' : self.getSequence(),
+            'protein': self.isProtein()
+        }
     
 
 class BPSSetList (ResidueSetList):
