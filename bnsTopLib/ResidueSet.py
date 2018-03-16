@@ -1,4 +1,5 @@
 
+import re
 
 class ResidueSetList():
     def __init__(self, pairsList=None, debug=False):
@@ -54,6 +55,8 @@ class ResidueSet():
         self.iniId=''
         self.finId=''
         self.items = set()
+        self.type=''
+        self.id=''
 
     def add(self,r):
         self.items.add(r)
@@ -87,6 +90,14 @@ class ResidueSet():
         for i in sorted(seq.keys()):
             seql.append(seq[i].chain+str(seq[i].resNum)+"-"+seq[i]._getOneLetterResidueCode())
         return seql
+    
+    def isProtein(self):
+        seq = self.getSequence()
+        seq = re.sub('[ACTGUX]','',seq)
+        if seq:
+            return True
+        else:
+            return False
 
     def _getResidues(self):
         seq={}
@@ -96,7 +107,7 @@ class ResidueSet():
         return seq
     
     def __str__(self):
-        return str(self.inir) + "-" + str(self.finr)+ ":" + self.getSequence()
+        return str(self.id) + ": " +str(self.inir) +  "-" + str(self.finr)+ "("+self.type+"):" + self.getSequence()
     
 
 class BPSSetList (ResidueSetList):

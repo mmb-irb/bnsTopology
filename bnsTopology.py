@@ -38,7 +38,7 @@ def getOrderedAtomPair(at1,at2,useChains=False):
         return [atom1,atom2]
     else:
         return [atom2,atom1]
-
+    
 def main():
 
     args = bnsTopLib.cmdLine({'BPTHRESDEF': BPTHRESDEF, 'INTDIST':INTDIST}).parse_args()
@@ -81,18 +81,29 @@ def main():
             print ("#DEBUG: ",r[0].resid(),r[1].resid())
 # Building Chains
     chList = bnsTopLib.ResidueSet.ResidueSetList(covLinkPairs)
+    
     print ("#INFO: Found ",chList.n," chain(s)")
     if args.json:
         jsondata.data['NOfChains']=chList.n
         
+    chnum=1
     for s in chList.getSortedSets():
-        print ("#CH ",s)
+        if s.isProtein():
+            s.type='prot'
+        else:
+            s.type='na'
+        s.id=chnum
+        print (s)
+        chnum=chnum+1
+        print ("#CH", s)
         if args.json:
             jsondata.data['chains'].append(
                 {
+                'id': s.id,
                 'iniRes' : str(s.inir), 
                 'finRes' : str(s.finr), 
-                'sequence' : s.getSequence()
+                'sequence' : s.getSequence(),
+                'protein': s.isProtein()
                 }
             )
 
@@ -100,7 +111,7 @@ def main():
     print ("#INFO: Residue Ids List")
     i=0
     for s in chList.getSortedSets():
-        print ('#CH',s.inir,'-',s.finr,':', ','.join(s.getResidueIdList()))
+        print ('#CH', str(s.id), '(',s.inir,'-',s.finr,'):', ','.join(s.getResidueIdList()))
         if args.graphml:
             for res in s.items:
                 xml.addResidue(i,res)
@@ -126,6 +137,8 @@ def main():
             for ch2 in chList.getSortedSets():
                 if ch2.ini <= ch1.ini:
                     continue
+                if ch1.type != 'prot' and ch2.type !='prot':
+                    continue
                 conts[ch1][ch2]=[]
                 interfPairs[ch1][ch2]=[]
                 int
@@ -140,7 +153,7 @@ def main():
                             [atom1,atom2] = getOrderedAtomPair(at1,at2,args.useChains)
                             [res1,res2] = getOrderedResiduePair(at1,at2,args.useChains)
                             if args.contacts and d <= HBLNK:
-                                print ("#CT ", atom1.atid(True), atom2.atid(True),d)
+                                print ("#CT ", str(ch1.id) +'-'+str(ch2.id), atom1.atid(True), atom2.atid(True),d)
                                 conts[ch1][ch2].append([atom1,atom2,d])
                                 if args.json:
                                     jsondata.data['contacts'].append({'ats':[atom1.atid(True), atom2.atid(True)],'distance':float(d)})
@@ -153,23 +166,35 @@ def main():
                 for ch2 in chList.getSortedSets():
                     if ch2.ini <= ch1.ini:
                         continue
+                    if ch1.type != 'prot' and ch2.type !='prot':
+                        continue
                     for s in intList[ch1][ch2].getSortedSets():
-                        print ("#INTRES ", ','.join(s.getResidueIdList()))
+                        print ("#INTRES ",str(ch1.id) +'-'+str(ch2.id), ','.join(s.getResidueIdList()))
                         if args.json:
                             jsondata.data['interfaces'].append(','.join(s.getResidueIdList()))
                 
 #Base Pairs
-    print ("#INFO: Base pairs found")
-
     hbAtoms = set()
     for hb in bnsTopLib.StructureWrapper.hbonds['WC']:
         for rat in hb:
             hbAtoms.add(rat)
+    
     wcats = []
-    for at in st.get_atoms():
-        if bnsTopLib.StructureWrapper.Atom(at).attype() in hbAtoms:
-            wcats.append(at)
+    
+    for ch in chList.getSortedSets():
+        if ch.type != 'na':
+            continue
+        for r in ch.items:
+            for at in r.residue.get_atoms():
+                if bnsTopLib.StructureWrapper.Atom(at).attype() in hbAtoms:
+                    wcats.append(at)
+    if not len(wcats):
+        print ("#WARNING: No Nucleis Acids chain found,exiting")
+        sys.exit()
+
     wc_nbsearch = NeighborSearch(wcats)
+
+    print ("#INFO: Base pairs found")
 
     nhbs={}
     for at1, at2 in wc_nbsearch.search_all(HBLNK):
