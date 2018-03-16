@@ -16,8 +16,8 @@ def main():
     
     args.useChains= args.useChains or loader.useChains      
     
-    if not args.id and loader.id:
-        args.id = loader.id
+#    if id not in args and id in loader:
+#        args.id = loader.id
     args.format = loader.format
     print()
     st = loader.loadStructure()

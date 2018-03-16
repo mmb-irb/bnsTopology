@@ -47,13 +47,13 @@ class Residue():
 
     def resid(self, compact=False):
         if self.useChains:
-            ch = ":"+self.chain
+            ch = self.chain
         else:
             ch = ''
         if compact:
-            return self._getOneLetterResidueCode() + ch + str(self.resNum)
+            return ch+str(self.resNum) +'-'+self._getOneLetterResidueCode() 
         else:
-            return self.residue.get_resname() + ch + ':'+ str(self.resNum)
+            return ch + str(self.resNum) + "-" + self.residue.get_resname() 
 
     def bnsid(self):
         return self.chain+str(self.resNum)+"-"+self._getOneLetterResidueCode()
