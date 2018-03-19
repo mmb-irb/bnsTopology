@@ -31,7 +31,7 @@ def main():
 # Checking max atoms
     if args.limit:
         if loader.numAts > args.limit:
-            print ("#LIMIT atoms exceeded ("+str(load.numAts)+")")
+            print ("#LIMIT atoms exceeded ("+str(loader.numAts)+")")
             sys.exit(1)
 #==============================================================================
 # Initializing topology object
