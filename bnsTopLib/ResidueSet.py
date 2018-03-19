@@ -78,10 +78,10 @@ class ResidueSet():
         rn=r.__index__()
         if rn < self.ini:
             self.ini = rn
-            self.inir = r.chain+str(r.resNum)
+            self.inir = r.resid()
         if rn > self.fin:
             self.fin = rn
-            self.finr = r.chain+str(r.resNum)
+            self.finr = r.resid()
         
     def union(self,other):
         self.items = self.items.union(other.items)
@@ -103,7 +103,11 @@ class ResidueSet():
         seq=self._getResidues()
         seql = []
         for i in sorted(seq.keys()):
-            seql.append(seq[i].chain+str(seq[i].resNum)+"-"+seq[i]._getOneLetterResidueCode())
+            rid = (seq[i].chain+str(seq[i].resNum)+"-"+seq[i]._getOneLetterResidueCode())
+            if seq[i].useModels:
+                seql.append(rid + "/"+ str(seq[i].model))
+            else:
+                seql.append(rid)
         return seql
     
     def isProtein(self):

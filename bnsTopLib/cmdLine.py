@@ -79,7 +79,16 @@ class cmdLine():
             dest='limit',
 	    default = defaults['LIMIT']
         )
-
+        
+        self.argparser.add_argument(
+            '--useModels',
+            action='store',
+            dest='useModels',
+            help='Use all Models [no, auto, force]',
+            default='auto'
+            )
+    
+        
         self.argparser.add_argument('pdb_path')
 
     def parse_args(self):    
@@ -89,3 +98,19 @@ class cmdLine():
             sys.exit(2)
         return args
 
+    def printArgs(self,args):
+        print ('#ARGS: Arguments list')
+        print ('#ARGS: ==============')
+        print ('#ARGS: pdb_path:', args.pdb_path)
+        print ('#ARGS: pdb_id:', args.id)
+        print ('#ARGS: input format:', args.format)
+        print ('#ARGS: Use PDB Chain ids:', args.useChains)
+        print ('#ARGS: Use PDB Models:', args.useModels)
+        print ('#ARGS: Get polar contacts:', args.contacts)
+        print ('#ARGS: Get Interface residues:', args.interface)
+        print ('#ARGS: Interface Distance:', args.intdist)
+        print ('#ARGS: bp min score:', args.bpthres)
+        print ('#ARGS: Max num atoms:', args.limit)
+        print ('#ARGS: JSON output:', args.json)
+        print ('#ARGS: GRAPHML output:', args.graphml)
+        print()
