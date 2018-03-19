@@ -3,11 +3,15 @@ from Bio.PDB.PDBParser import PDBParser
 from Bio.PDB.MMCIFParser import MMCIFParser
 from Bio.PDB.PDBList import PDBList
 
+import math
 import sys
+
+MODELS_MAXRMS=5.0
 
 class PDBLoader():
     def __init__(self, pdb_path):
         self.useChains=False
+        self.models=''
         if "pdb:"in pdb_path:
             pdbl= PDBList(pdb='tmpPDB')
             try:
@@ -46,20 +50,35 @@ class PDBLoader():
         #Atom renumbering for mmCIF, 
         if self.format == 'cif':
             i=1
-            for at in st.get_atoms():
+            for at in st.get_atoms(): # Check numbering in models
                 at.serial_number = i
                 if hasattr(at,'selected_child'):
                     at.selected_child.serial_number=i
                 i=i+1
-# Checking for models
-        if len(st) > 1:
-            print ("#WARNING: Several Models found, using only first")
-# Using Model 0 any way TODO: revise for bioiunits
-        st = st[0]
-        self.numAts=0
-        for at in st.get_atoms():
+        self.numAts=0        
+        
+        for at in st[0].get_atoms():
             self.numAts=self.numAts+1
-	
-
-
+        #checking models
+        if len(st) > 1:
+            #print ("#DEBUG: Found "+str(len(st))+" models")
+            if self.calcRMSdAll(st[0],st[1]) < MODELS_MAXRMS:
+                #print ("#DEBUG: Models look like alternative conformations, will consider only one")
+                self.models='alt'
         return st
+
+    def calcRMSdAll (self, st1,st2):
+        ats1=[]
+        ats2=[]
+        for at in st1.get_atoms():
+            ats1.append(at)
+        for at in st2.get_atoms():
+            ats2.append(at)
+        rmsd=0
+        i=0
+        while i<len(ats1)and i <len(ats2):
+            d=ats1[i]-ats2[i]
+            rmsd = rmsd + d*d/len(ats1)
+            i=i+1
+        return (math.sqrt(rmsd))
+        

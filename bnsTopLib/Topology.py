@@ -17,7 +17,7 @@ class Topology():
         
 
     def calcCovLinks(self, st):
-        bckats = []
+        bckats = [] 
         for at in st.get_atoms():
             if '.'+at.id in bnsTopLib.StructureWrapper.backbone_link_atoms:
                 bckats.append(at)
@@ -27,7 +27,7 @@ class Topology():
         for at1, at2 in nbsearch.search_all(Topology.COVLNK):
             if Topology.sameResidue(at1,at2):
                 continue
-            self.covLinkPairs.append (Topology.getOrderedResiduePair(at1,at2,self.args.useChains))
+            self.covLinkPairs.append (Topology.getOrderedResiduePair(at1,at2,self.args.useChains,self.args.useModels))
         if self.args.debug:
             print ("#DEBUG: covalently linked residue pairs")
             for r in sorted(self.covLinkPairs, key=lambda i: i[0].residue.index):
@@ -56,11 +56,13 @@ class Topology():
                         cont = s1[r1].getClosestContact(s2[r2],self.args.intdist)
                         if cont:
                             [at1,at2,d] = cont
-                            [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains)
-                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains)
-                            if d <= Topology.HBLNK:
-                                self.conts[ch1][ch2].append([atom1,atom2,d])
+                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
                             self.interfPairs[ch1][ch2].append([res1,res2])
+                        contp = s1[r1].getClosestPolarContact(s2[r2],Topology.HBLNK)
+                        if contp:
+                            [at1,at2,d] = contp
+                            [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
+                            self.conts[ch1][ch2].append([atom1,atom2,d])
                 self.intList[ch1][ch2] = bnsTopLib.ResidueSet.ResidueSetList(self.interfPairs[ch1][ch2])
         
     def checkExistsNA(self):
@@ -89,8 +91,8 @@ class Topology():
 
             [atom1,atom2] = bnsTopLib.Topology.getOrderedAtomPair(at1,at2,self.args.useChains)
 
-            res1 = bnsTopLib.StructureWrapper.Residue(atom1.at.get_parent(),self.args.useChains)
-            res2 = bnsTopLib.StructureWrapper.Residue(atom2.at.get_parent(),self.args.useChains)
+            res1 = bnsTopLib.StructureWrapper.Residue(atom1.at.get_parent(),self.args.useChains,self.args.useModels)
+            res2 = bnsTopLib.StructureWrapper.Residue(atom2.at.get_parent(),self.args.useChains,self.args.useModels)
 
             if [atom1.attype(), atom2.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC'] and \
                 [atom2.attype(), atom1.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC']:
@@ -214,18 +216,18 @@ class Topology():
     def sameResidue(at1,at2):
         return at1.get_parent() == at2.get_parent()
 
-    def getOrderedResiduePair(at1,at2,useChains=False):
+    def getOrderedResiduePair(at1,at2,useChains=False, useModels=False):
 # Defining residues as res1 < res2
-        res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains)
-        res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains)
+        res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains,useModels)
+        res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains,useModels)
         if res1 < res2:
             return [res1,res2]
         else:
             return [res2,res1]
 
-    def getOrderedAtomPair(at1,at2,useChains=False):
-        atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains)
-        atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains)
+    def getOrderedAtomPair(at1,at2,useChains=False,useModels=False):
+        atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains, useModels)
+        atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains, useModels)
         if atom1 < atom2:
             return [atom1,atom2]
         else:

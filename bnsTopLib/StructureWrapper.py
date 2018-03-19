@@ -36,33 +36,43 @@ class Residue():
         'THR':'T', 'VAL':'V', 'TRP':'W', 'TYR':'Y'
     }
 
-    def __init__(self, r, useChains=False):
+    def __init__(self, r, useChains=False, useModels=False):
         self.residue = r
         self.useChains = useChains
+        self.useModels = useModels
         if self.useChains:
             self.chain = r.get_parent().id
         else:
             self.chain =''
+        if self.useModels:
+            self.model = r.get_parent().get_parent().id
         self.resNum = int(self.residue.id[1])
 
     def resid(self, compact=False):
         if self.useChains:
             ch = ":"+self.chain
         else:
-            ch = ''
-        if compact:
-            return self._getOneLetterResidueCode() + ch + str(self.resNum)
+            ch = ''            
+        if self.useModels:
+            md = '/'+str(self.model)
         else:
-            return self.residue.get_resname() + ch + ':'+ str(self.resNum)
+            md = ''
+        if compact:
+            return self._getOneLetterResidueCode() + ch + str(self.resNum) + md
+        else:
+            return self.residue.get_resname() + ch + ':'+ str(self.resNum) + md
 
     def bnsid(self):
         return self.chain+str(self.resNum)+"-"+self._getOneLetterResidueCode()
 
-    def getClosestContact(self,other,limd):
+    def getClosestPolarContact(self,other,limd):
+        return self.getClosestContact(other,limd,['N','O','S'])
+    
+    def getClosestContact(self,other,limd, refats=['N','O','S']):
         dr=10000.
         for at1 in self.residue.get_list():
             for at2 in other.residue.get_list():
-                if at1.element not in ['N','O','S'] or at2.element not in ['N','O','S']:
+                if at1.element not in refats or at2.element not in refats:
                     continue
                 d = at1-at2
                 if d <= limd and d < dr:
@@ -94,28 +104,29 @@ class Residue():
         return self.resid()
     
     def __index__(self):
-        if self.useChains:
+        #if self.useChains:
             return self.residue.index
-        else:
-            return self.resNum
+        #else:
+        #    return self.resNum
     
 
 class Atom():
-    def __init__ (self, at, useChains=False):
+    def __init__ (self, at, useChains=False, useModels=False):
          self.at=at
          self.useChains=useChains
+         self.useModels=useModels
 
     def atid(self, compact=False):
         return self.resid(compact)+"."+self.at.id
 
     def resid(self, compact=False):
-        return Residue(self.at.get_parent(),self.useChains).resid(compact)
+        return Residue(self.at.get_parent(),self.useChains,self.useModels).resid(compact)
 
     def resNum(self):
-        return Residue(self.at.get_parent(),self.useChains).resNum()
+        return Residue(self.at.get_parent(),self.useChains,self.useModels).resNum()
 
     def attype(self):
-        return Residue(self.at.get_parent(),self.useChains)._getOneLetterResidueCode()+'.'+self.at.id
+        return Residue(self.at.get_parent(),self.useChains,self.useModels)._getOneLetterResidueCode()+'.'+self.at.id
 
     def __lt__(self,other):
         return self.at.get_serial_number()<other.at.get_serial_number()

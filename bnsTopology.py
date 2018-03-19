@@ -7,32 +7,65 @@ __author__ = "gelpi"
 __date__ = "$29-ago-2017 16:14:26$"
 
 import bnsTopLib
+import sys
 
 def main():
 
-    args = bnsTopLib.cmdLine({'BPTHRESDEF': bnsTopLib.Topology.BPTHRESDEF, 'INTDIST':bnsTopLib.Topology.INTDIST, 'LIMIT':10000}).parse_args()
+    cmdline = bnsTopLib.cmdLine({'BPTHRESDEF': bnsTopLib.Topology.BPTHRESDEF, 'INTDIST':bnsTopLib.Topology.INTDIST, 'LIMIT':10000})
+    args=cmdline.parse_args()
 # ============================================================================
     loader = bnsTopLib.PDBLoader(args.pdb_path)
     
     args.useChains= args.useChains or loader.useChains      
-    
-    if not args.id and loader.id:
+    if not hasattr(args,'id') and hasattr(loader,'id'):
         args.id = loader.id
     args.format = loader.format
-    print()
+    
+    print ('#HEADER')
+    print ('#HEADER Simple topology analyzer')
+    print ('#HEADER J.L Gelpi 2018')
+    print ('#HEADER')
+    cmdline.printArgs(args)
+    
     st = loader.loadStructure()
-    if args.useChains:
-        print ('#INFO: Using chain ids from input data')
-    else:
-        print ('#INFO: Not using chain ids')
-#Checking for chain ids in input TODO:make automatic
-        if len(st) > 1:
-            print ("#WARNING: Input PDB contains more than one chain ids, consider renumbering ")
+
+
 # Checking max atoms
     if args.limit:
         if loader.numAts > args.limit:
             print ("#LIMIT atoms exceeded ("+str(loader.numAts)+")")
             sys.exit(1)
+# Checking models
+    if len(st)> 1:
+        if args.useModels == 'no':
+            print ("#WARNING: Input Structure contains models, but using only first one due to useModels settings")
+            args.useModels == False
+        elif args.useModels == 'auto':
+            if loader.models=='alt':
+                print ("#WARNING: Input Structure contains models, but they look as NMR models, using the first one (override with force)")
+                args.useModels = False
+            else:
+                args.useModels = True
+        elif args.useModels=='force':             
+            if loader.models=='alt':
+                print ('#WARNING: Models found look like NMR models, but using all due to useModels = force')
+            args.useModels=True
+        else:
+            print ("#ERROR: unknown useModels option")
+        if not args.useModels:
+            ids=[]
+            for md in st.get_models():
+                ids.append(md.id)
+            for i in range(1,len(ids)):
+                st.detach_child(ids[i])
+            args.useModels=False
+    else:
+        args.useModels=False
+
+#Checking chains
+    if not args.useChains and len(st[0]) > 1:
+        print ("#WARNING: Input Structure contains more than one chain ids, consider renumbering ")
+    
 #==============================================================================
 # Initializing topology object
     top = bnsTopLib.Topology(args)
@@ -45,9 +78,7 @@ def main():
     print ('#INFO: Found %i chain(s)'% (top.chList.n))
     
     for s in top.chList.getSortedSets():
-        print ("#CH", s)
-    
-
+        print ("#CH", s)  
 # Residue list
     print ("\n#INFO: Residue Ids List")
     
