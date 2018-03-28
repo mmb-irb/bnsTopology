@@ -140,7 +140,8 @@ class ResidueSet():
             'iniRes' : str(self.inir), 
             'finRes' : str(self.finr), 
             'sequence' : self.getSequence(),
-            'protein': self.isProtein()
+            'protein': self.isProtein(),
+            'residueList' : self.getResidueIdList()
         }
     
 

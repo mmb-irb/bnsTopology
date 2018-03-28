@@ -178,6 +178,7 @@ class Topology():
         jsondata.set('NChains', self.chList.n)
         for s in self.chList.getSortedSets():
             jsondata.appendData('chains',s.json())
+        
         for r in sorted(self.covLinkPairs, key=lambda i: i[0].residue.index):
             jsondata.appendData('covLinks', [r[0].resid(True),r[1].resid(True)])
 # Contacts & interfaces
