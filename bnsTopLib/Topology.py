@@ -14,8 +14,17 @@ class Topology():
     def __init__(self,args):
         self.covLinkPairs=[]
         self.args = args
-        
+        self.conts={}
+        self.intList={}
+        self.interfPairs={}
+        self.wcats = []
+        self.bps = []
+        self.bpsteps=[]
+        self.HFSeqs=[]
+        self.bpsref={}
+        self.notInHF=set()
 
+        
     def calcCovLinks(self, st):
         bckats = []
         for at in st.get_atoms():
@@ -34,9 +43,7 @@ class Topology():
                 print ("#DEBUG: ",r[0].resid(),r[1].resid())        
 
     def calcContacts(self):
-        self.conts={}
-        self.intList={}
-        self.interfPairs={}
+
         for ch1 in self.chList.getSortedSets():
             self.conts[ch1]={}
             self.intList[ch1]={}
@@ -68,7 +75,6 @@ class Topology():
         for hb in bnsTopLib.StructureWrapper.hbonds['WC']:
             for rat in hb:
                 hbAtoms.add(rat)
-        self.wcats = []
         for ch in self.chList.getSortedSets():
             if ch.type != 'na':
                 continue
@@ -115,8 +121,7 @@ class Topology():
             for r1 in nhbs.keys():
                 for r2 in nhbs[r1].keys():
                     print ("#DEBUG: ", r1, r2, nhbs[r1][r2])
-
-        self.bps = []
+        
         for r1 in nhbs.keys():
             maxv=0.
             pair=''
@@ -127,13 +132,11 @@ class Topology():
             if maxv > self.args.bpthres:
                 self.bps.append(bnsTopLib.StructureWrapper.BPair(r1,pair,maxv))
 
-        self.bpsref={}
-
         for bp in sorted(self.bps):
             self.bpsref[bp.r1.residue.index]=bp
         
     def calcBPSteps(self):
-        self.bpsteps=[]
+
         for bp1 in sorted(self.bps):        
             for bp2 in sorted(self.bps):
                 if bp1 < bp2:
@@ -155,7 +158,13 @@ class Topology():
                         bpstepPairs.append([bpst1,bpst2])
 
         self.HFragList=bnsTopLib.ResidueSet.BPSSetList(bpstepPairs)
-        self.HFSeqs=[]
+
+        for ch in self.chList.getSortedSets():
+            if ch.type != 'na':
+                continue
+            for r in ch.items:
+                self.notInHF.add(r)
+
         for fr in self.HFragList.getSortedSets():
             frag={}
             for i in range (fr.ini,fr.fin+1):
@@ -164,7 +173,13 @@ class Topology():
             seq=[]
             for bp in sorted(frag.keys(), key=bnsTopLib.StructureWrapper.BPair.__index__):
                 seq.append(bp.bpid())
+                self.notInHF.remove(bp.r1)
+                self.notInHF.remove(bp.r2)
+                
             self.HFSeqs.append(seq)
+        
+            
+        
     
     def json(self):
         jsondata = bnsTopLib.JSONWriter()   
@@ -208,6 +223,8 @@ class Topology():
 # Continuous helical segments from stretches of overlapping bsteps
             for frs in self.HFSeqs:
                 jsondata.appendData('HelicalFrags', frs)
+            for r in self.notInHF:
+                jsondata.appendData('ResiduesNotHF',r.resid(1))
         return jsondata
     
 #===============================================================================    

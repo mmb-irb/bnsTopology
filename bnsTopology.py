@@ -46,7 +46,6 @@ def main():
     
     for s in top.chList.getSortedSets():
         print ("#CH", s)
-    
 
 # Residue list
     print ("\n#INFO: Residue Ids List")
@@ -98,6 +97,13 @@ def main():
         top.calcHelicalFrags()
         for frs in top.HFSeqs:
             print ("#HF", ','.join(frs))
+        print ()
+        print ("#INFO: Residues not in helical segments")
+        nhf =[]
+        for r in top.notInHF:
+            nhf.append(r.resid(1))
+        print ("#NHF",','.join(nhf))
+            
     if args.json:
         top.json().save(args.json)
         print()
