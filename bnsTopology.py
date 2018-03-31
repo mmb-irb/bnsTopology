@@ -10,7 +10,7 @@ import bnsTopLib
 
 def main():
 
-    args = bnsTopLib.cmdLine({'BPTHRESDEF': bnsTopLib.Topology.BPTHRESDEF, 'INTDIST':bnsTopLib.Topology.INTDIST}).parse_args()
+    args = bnsTopLib.cmdLine({'BPTHRESDEF': bnsTopLib.Topology.BPTHRESDEF, 'INTDIST':bnsTopLib.Topology.INTDIST, 'LIMIT':10000}).parse_args()
 # ============================================================================
     loader = bnsTopLib.PDBLoader(args.pdb_path)
     
@@ -28,6 +28,11 @@ def main():
 #Checking for chain ids in input TODO:make automatic
         if len(st) > 1:
             print ("#WARNING: Input PDB contains more than one chain ids, consider renumbering ")
+# Checking max atoms
+    if args.limit:
+        if loader.numAts > args.limit:
+            print ("#LIMIT atoms exceeded ("+str(loader.numAts)+")")
+            sys.exit(1)
 #==============================================================================
 # Initializing topology object
     top = bnsTopLib.Topology(args)
@@ -41,7 +46,6 @@ def main():
     
     for s in top.chList.getSortedSets():
         print ("#CH", s)
-    
 
 # Residue list
     print ("\n#INFO: Residue Ids List")
@@ -72,7 +76,7 @@ def main():
                 
     if not top.checkExistsNA():
         print()
-        print ("#WARNING: No Nucleis Acids chain found, skipping NA topology")
+        print ("#WARNING: No WC atom(s) found, skipping NA topology")
 #Base Pairs
     else:
         print()
@@ -93,6 +97,13 @@ def main():
         top.calcHelicalFrags()
         for frs in top.HFSeqs:
             print ("#HF", ','.join(frs))
+        print ()
+        print ("#INFO: Residues not in helical segments")
+        nhf =[]
+        for r in top.notInHF:
+            nhf.append(r.resid(1))
+        print ("#NHF",','.join(nhf))
+            
     if args.json:
         top.json().save(args.json)
         print()

@@ -56,6 +56,10 @@ class PDBLoader():
             print ("#WARNING: Several Models found, using only first")
 # Using Model 0 any way TODO: revise for bioiunits
         st = st[0]
+        self.numAts=0
+        for at in st.get_atoms():
+            self.numAts=self.numAts+1
+	
 
 
         return st

@@ -72,6 +72,14 @@ class cmdLine():
             default = defaults['INTDIST'],
         )
 
+        self.argparser.add_argument(
+	    '--limit',
+            action='store',
+	    help='Max. number of atoms, Default 10000',
+            dest='limit',
+	    default = defaults['LIMIT']
+        )
+
         self.argparser.add_argument('pdb_path')
 
     def parse_args(self):    
@@ -80,7 +88,4 @@ class cmdLine():
             argparser.print_help()
             sys.exit(2)
         return args
-
-
-
 
