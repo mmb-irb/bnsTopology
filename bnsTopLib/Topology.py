@@ -63,12 +63,14 @@ class Topology():
                         cont = s1[r1].getClosestContact(s2[r2],self.args.intdist)
                         if cont:
                             [at1,at2,d] = cont
+                            [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
                             [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
                             self.interfPairs[ch1][ch2].append([res1,res2])
                         contp = s1[r1].getClosestPolarContact(s2[r2],Topology.HBLNK)
                         if contp:
                             [at1,at2,d] = contp
                             [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
+                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
                             self.conts[ch1][ch2].append([atom1,atom2,d])
                 self.intList[ch1][ch2] = bnsTopLib.ResidueSet.ResidueSetList(self.interfPairs[ch1][ch2])
         
