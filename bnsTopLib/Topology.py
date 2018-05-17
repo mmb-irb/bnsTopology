@@ -36,7 +36,7 @@ class Topology():
         for at1, at2 in nbsearch.search_all(Topology.COVLNK):
             if self.sameResidue(at1,at2):
                 continue
-            self.covLinkPairs.append (Topology.getOrderedResiduePair(at1,at2,self.args.useChains,self.args.useModels))
+            self.covLinkPairs.append (self.getOrderedResiduePair(at1,at2,self.args.useChains,self.args.useModels))
         if self.args.debug:
             print ("#DEBUG: covalently linked residue pairs")
             for r in sorted(self.covLinkPairs, key=lambda i: i[0].residue.index):
@@ -63,14 +63,14 @@ class Topology():
                         cont = s1[r1].getClosestContact(s2[r2],self.args.intdist)
                         if cont:
                             [at1,at2,d] = cont
-                            [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
-                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
+                            [atom1,atom2] = self.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
+                            [res1,res2] = self.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
                             self.interfPairs[ch1][ch2].append([res1,res2])
                         contp = s1[r1].getClosestPolarContact(s2[r2],Topology.HBLNK)
                         if contp:
                             [at1,at2,d] = contp
-                            [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
-                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
+                            [atom1,atom2] = self.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
+                            [res1,res2] = self.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
                             self.conts[ch1][ch2].append([atom1,atom2,d])
                 self.intList[ch1][ch2] = bnsTopLib.ResidueSet.ResidueSetList(self.interfPairs[ch1][ch2])
         
@@ -236,7 +236,7 @@ class Topology():
     def sameResidue(self,at1,at2):
         return at1.get_parent() == at2.get_parent()
 
-    def getOrderedResiduePair(at1,at2,useChains=False, useModels=False):
+    def getOrderedResiduePair(self,at1,at2,useChains=False, useModels=False):
 # Defining residues as res1 < res2
         res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains,useModels)
         res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains,useModels)
@@ -245,7 +245,7 @@ class Topology():
         else:
             return [res2,res1]
 
-    def getOrderedAtomPair(at1,at2,useChains=False,useModels=False):
+    def getOrderedAtomPair(self,at1,at2,useChains=False,useModels=False):
         atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains, useModels)
         atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains, useModels)
         if atom1 < atom2:
