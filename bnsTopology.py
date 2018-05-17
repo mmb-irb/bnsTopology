@@ -32,7 +32,7 @@ def main():
 
 # Checking max atoms
     if args.limit:
-        if loader.numAts > args.limit:
+        if loader.numAts > int(args.limit):
             print ("#LIMIT atoms exceeded ("+str(loader.numAts)+")")
             sys.exit(1)
 # Checking models
