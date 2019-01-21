@@ -1,6 +1,10 @@
 
 
-import bnsTopLib.StructureWrapper
+from bns_topology.structure_wrapper import backbone_link_atoms, hbonds
+from bns_topology.structure_wrapper import Residue, Atom, BPair, BPStep
+from bns_topology.residueset import BPSSetList
+from bns_topology.JSON_writer import JSONWriter
+
 
 from Bio.PDB.NeighborSearch import NeighborSearch
 
@@ -24,23 +28,23 @@ class Topology():
         self.bpsref={}
         self.notInHF=set()
 
-        
+
     def calcCovLinks(self, st):
-        bckats = [] 
+        bckats = []
         for at in st.get_atoms():
-            if '.'+at.id in bnsTopLib.StructureWrapper.backbone_link_atoms:
+            if '.'+at.id in backbone_link_atoms:
                 bckats.append(at)
 
         nbsearch = NeighborSearch(bckats)
 
         for at1, at2 in nbsearch.search_all(Topology.COVLNK):
-            if Topology.sameResidue(at1,at2):
+            if sameResidue(at1,at2):
                 continue
-            self.covLinkPairs.append (Topology.getOrderedResiduePair(at1,at2,self.args.useChains,self.args.useModels))
+            self.covLinkPairs.append (getOrderedResiduePair(at1,at2,self.args.useChains,self.args.useModels))
         if self.args.debug:
             print ("#DEBUG: covalently linked residue pairs")
             for r in sorted(self.covLinkPairs, key=lambda i: i[0].residue.index):
-                print ("#DEBUG: ",r[0].resid(),r[1].resid())        
+                print ("#DEBUG: ",r[0].resid(),r[1].resid())
 
     def calcContacts(self):
 
@@ -64,19 +68,19 @@ class Topology():
                         if cont:
                             [at1,at2,d] = cont
                             [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
-                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
+                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)
                             self.interfPairs[ch1][ch2].append([res1,res2])
                         contp = s1[r1].getClosestPolarContact(s2[r2],Topology.HBLNK)
                         if contp:
                             [at1,at2,d] = contp
                             [atom1,atom2] = Topology.getOrderedAtomPair(at1,at2,self.args.useChains,self.args.useModels)
-                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)                            
+                            [res1,res2] = Topology.getOrderedResiduePair(at1,at2,self.args.useChains, self.args.useModels)
                             self.conts[ch1][ch2].append([atom1,atom2,d])
                 self.intList[ch1][ch2] = bnsTopLib.ResidueSet.ResidueSetList(self.interfPairs[ch1][ch2])
-        
+
     def checkExistsNA(self):
         hbAtoms = set()
-        for hb in bnsTopLib.StructureWrapper.hbonds['WC']:
+        for hb in hbonds['WC']:
             for rat in hb:
                 hbAtoms.add(rat)
         for ch in self.chList.getSortedSets():
@@ -84,26 +88,26 @@ class Topology():
                 continue
             for r in ch.items:
                 for at in r.residue.get_atoms():
-                    if bnsTopLib.StructureWrapper.Atom(at).attype() in hbAtoms:
+                    if Atom(at).attype() in hbAtoms:
                         self.wcats.append(at)
         self.NAOk = len(self.wcats)
         return self.NAOk
-        
+
     def calcBasePairs(self):
         wc_nbsearch = NeighborSearch(self.wcats)
 
         nhbs={}
-        for at1, at2 in wc_nbsearch.search_all(bnsTopLib.Topology.HBLNK):
-            if bnsTopLib.Topology.sameResidue(at1,at2):
+        for at1, at2 in wc_nbsearch.search_all(Topology.HBLNK):
+            if sameResidue(at1,at2):
                 continue
 
-            [atom1,atom2] = bnsTopLib.Topology.getOrderedAtomPair(at1,at2,self.args.useChains)
+            [atom1,atom2] = getOrderedAtomPair(at1,at2,self.args.useChains)
 
-            res1 = bnsTopLib.StructureWrapper.Residue(atom1.at.get_parent(),self.args.useChains,self.args.useModels)
-            res2 = bnsTopLib.StructureWrapper.Residue(atom2.at.get_parent(),self.args.useChains,self.args.useModels)
+            res1 = Residue(atom1.at.get_parent(),self.args.useChains,self.args.useModels)
+            res2 = Residue(atom2.at.get_parent(),self.args.useChains,self.args.useModels)
 
-            if [atom1.attype(), atom2.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC'] and \
-                [atom2.attype(), atom1.attype()] not in bnsTopLib.StructureWrapper.hbonds['WC']:
+            if [atom1.attype(), atom2.attype()] not in hbonds['WC'] and \
+                [atom2.attype(), atom1.attype()] not in hbonds['WC']:
                 continue
 
             if [res1,res2] in self.covLinkPairs:
@@ -125,7 +129,7 @@ class Topology():
             for r1 in nhbs.keys():
                 for r2 in nhbs[r1].keys():
                     print ("#DEBUG: ", r1, r2, nhbs[r1][r2])
-        
+
         for r1 in nhbs.keys():
             maxv=0.
             pair=''
@@ -134,25 +138,25 @@ class Topology():
                     pair=r2
                     maxv=nhbs[r1][r2]
             if maxv > self.args.bpthres:
-                self.bps.append(bnsTopLib.StructureWrapper.BPair(r1,pair,maxv))
+                self.bps.append(BPair(r1,pair,maxv))
 
         for bp in sorted(self.bps):
             self.bpsref[bp.r1.residue.index]=bp
-        
+
     def calcBPSteps(self):
 
-        for bp1 in sorted(self.bps):        
+        for bp1 in sorted(self.bps):
             for bp2 in sorted(self.bps):
                 if bp1 < bp2:
                     if bp1.r1.residue.index == bp2.r1.residue.index-1 and \
                     bp1.r2.residue.index == bp2.r2.residue.index+1:
-                        self.bpsteps.append(bnsTopLib.StructureWrapper.BPStep(bp1,bp2))
+                        self.bpsteps.append(BPStep(bp1,bp2))
 
         self.bpstpref={}
 
         for bpstp in sorted(self.bpsteps):
             self.bpstpref[bpstp.bp1.r1.residue.index]=bpstp
-        
+
     def calcHelicalFrags(self):
         bpstepPairs=[]
         for bpst1 in sorted(self.bpsteps):
@@ -161,7 +165,7 @@ class Topology():
                     if bpst1.bp1.r1.residue.index == bpst2.bp1.r1.residue.index-1:
                         bpstepPairs.append([bpst1,bpst2])
 
-        self.HFragList=bnsTopLib.ResidueSet.BPSSetList(bpstepPairs)
+        self.HFragList=BPSSetList(bpstepPairs)
 
         for ch in self.chList.getSortedSets():
             if ch.type != 'na':
@@ -175,18 +179,16 @@ class Topology():
                 for bb in self.bpstpref[i].comps():
                     frag[bb]=1
             seq=[]
-            for bp in sorted(frag.keys(), key=bnsTopLib.StructureWrapper.BPair.__index__):
+            for bp in sorted(frag.keys(), key=BPair.__index__):
                 seq.append(bp.bpid())
                 self.notInHF.remove(bp.r1)
                 self.notInHF.remove(bp.r2)
-                
+
             self.HFSeqs.append(seq)
-        
-            
-        
-    
+
+
     def json(self):
-        jsondata = bnsTopLib.JSONWriter()   
+        jsondata = JSONWriter()
 
         jsondata.set('useChains',self.args.useChains)
         jsondata.set('inputFormat', self.args.format)
@@ -195,20 +197,20 @@ class Topology():
         jsondata.set('NChains', self.chList.n)
         for s in self.chList.getSortedSets():
             jsondata.appendData('chains',s.json())
-        
+
         for r in sorted(self.covLinkPairs, key=lambda i: i[0].residue.index):
             jsondata.appendData('covLinks', [r[0].resid(True),r[1].resid(True)])
 # Contacts & interfaces
         for ch1 in self.conts:
             for ch2 in self.conts[ch1]:
                 for c in self.conts[ch1][ch2]:
-                    jsondata.appendData('contacts', 
+                    jsondata.appendData('contacts',
                         {
                             'ats':[c[0].atid(True), c[1].atid(True)],
                             'distance':float(c[2])
                         }
                     )
-        
+
         intData={'cutoff':self.args.intdist}
         for ch1 in self.intList:
             for ch2 in self.intList[ch1]:
@@ -216,11 +218,11 @@ class Topology():
                 for s in self.intList[ch1][ch2].getSortedSets():
                     intDataList.append(','.join(s.getResidueIdList()))
                 intData[str(ch1.id)+'-'+str(ch2.id)]=intDataList
-        jsondata.set('interfaces',intData) 
+        jsondata.set('interfaces',intData)
         if self.NAOk:
             for bp in sorted(self.bps):
                 jsondata.appendData('bpList', bp.json())
-    
+
 # Bpair steps from neighbour bps, relays on residue renumbering. TODO Check connectivity
             for bpstp in sorted(self.bpsteps):
                 jsondata.appendData('bpStepList', bpstp.json())
@@ -231,26 +233,26 @@ class Topology():
             for r in self.notInHF:
                 jsondata.appendData('ResiduesNotHF',r.resid(1))
         return jsondata
-    
-#===============================================================================    
-    def sameResidue(at1,at2):
-        return at1.get_parent() == at2.get_parent()
 
-    def getOrderedResiduePair(at1,at2,useChains=False, useModels=False):
+#===============================================================================
+def sameResidue(at1,at2):
+    return at1.get_parent() == at2.get_parent()
+
+def getOrderedResiduePair(at1,at2,useChains=False, useModels=False):
 # Defining residues as res1 < res2
-        res1 = bnsTopLib.StructureWrapper.Residue(at1.get_parent(), useChains,useModels)
-        res2 = bnsTopLib.StructureWrapper.Residue(at2.get_parent(), useChains,useModels)
-        if res1 < res2:
-            return [res1,res2]
-        else:
-            return [res2,res1]
+    res1 = Residue(at1.get_parent(), useChains,useModels)
+    res2 = Residue(at2.get_parent(), useChains,useModels)
+    if res1 < res2:
+        return [res1,res2]
+    else:
+        return [res2,res1]
 
-    def getOrderedAtomPair(at1,at2,useChains=False,useModels=False):
-        atom1 = bnsTopLib.StructureWrapper.Atom(at1, useChains, useModels)
-        atom2 = bnsTopLib.StructureWrapper.Atom(at2, useChains, useModels)
-        if atom1 < atom2:
-            return [atom1,atom2]
-        else:
-            return [atom2,atom1]
-    
+def getOrderedAtomPair(at1,at2,useChains=False,useModels=False):
+    atom1 = Atom(at1, useChains, useModels)
+    atom2 = Atom(at2, useChains, useModels)
+    if atom1 < atom2:
+        return [atom1,atom2]
+    else:
+        return [atom2,atom1]
+
 

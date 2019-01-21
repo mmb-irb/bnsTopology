@@ -52,7 +52,7 @@ class Residue():
         if self.useChains:
             ch = ":"+self.chain
         else:
-            ch = ''            
+            ch = ''
         if self.useModels:
             md = '/'+str(self.model)
         else:
@@ -67,7 +67,7 @@ class Residue():
 
     def getClosestPolarContact(self,other,limd):
         return self.getClosestContact(other,limd,['N','O','S'])
-    
+
     def getClosestContact(self,other,limd, refats=['N','O','S']):
         dr=10000.
         for at1 in self.residue.get_list():
@@ -90,7 +90,7 @@ class Residue():
             return 'X'
         else:
             return Residue.oneLetterResidueCode[resid]
-    
+
     def __hash__(self):
         return hash(self.resid())
 
@@ -102,13 +102,13 @@ class Residue():
 
     def __str__(self):
         return self.resid()
-    
+
     def __index__(self):
         #if self.useChains:
             return self.residue.index
         #else:
         #    return self.resNum
-    
+
 
 class Atom():
     def __init__ (self, at, useChains=False, useModels=False):
@@ -168,10 +168,10 @@ class BPair():
             return self.bpid()
         elif mode==1:
             return '%6s (%2s): %12s (%6.4f)' % (self.bpid(), self.type,','.join(self.compsIds()), self.score)
-    
+
     def __hash__(self):
         return hash(self.bpid())
-    
+
     def __index__(self):
         return self.r1.residue.index
 
@@ -179,7 +179,7 @@ class BPair():
         return  {
                     'id': self.bpid(),
                     'type':self.type,
-                    'score':float(self.score), 
+                    'score':float(self.score),
                     'comps':self.compsIds()
                 }
 
@@ -203,10 +203,10 @@ class BPStep():
 
     def comps(self):
         return [self.bp1,self.bp2]
-    
+
     def compsIds(self):
         return [self.bp1.bpid(),self.bp2.bpid()]
-    
+
     def resNum(self):
         return self.bp1.r1.resNum
 
@@ -224,10 +224,10 @@ class BPStep():
 
     def __hash__(self):
         return hash(self.stepid())
-    
+
     def __index__(self):
         return self.bp1.r1.residue.index
-    
+
     def json(self):
         return {
             'id':self.stepid(),

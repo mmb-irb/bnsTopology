@@ -1,4 +1,4 @@
-#! /usr/bin/python
+#! /usr/bin/python3
 #
 # Simple parser to extact topology of NA from simulation snapshot
 # Chain ids or TER not required
@@ -6,27 +6,31 @@
 __author__ = "gelpi"
 __date__ = "$29-ago-2017 16:14:26$"
 
-import bnsTopLib
 import sys
+from bns_topology.cmd_line import cmdLine
+from bns_topology.topology import Topology
+from bns_topology.PDB_loader import PDBLoader
+from bns_topology.residueset import ResidueSetList
+from bns_topology.graphml_writer import GraphmlWriter
 
 def main():
 
-    cmdline = bnsTopLib.cmdLine({'BPTHRESDEF': bnsTopLib.Topology.BPTHRESDEF, 'INTDIST':bnsTopLib.Topology.INTDIST, 'LIMIT':10000})
-    args=cmdline.parse_args()
+    cmd_line = cmdLine({'BPTHRESDEF': Topology.BPTHRESDEF, 'INTDIST':Topology.INTDIST, 'LIMIT':10000})
+    args=cmd_line.parse_args()
 # ============================================================================
-    loader = bnsTopLib.PDBLoader(args.pdb_path)
-    
-    args.useChains= args.useChains or loader.useChains      
+    loader = PDBLoader(args.pdb_path)
+
+    args.useChains= args.useChains or loader.useChains
     if not hasattr(args,'id') and hasattr(loader,'id'):
         args.id = loader.id
     args.format = loader.format
-    
+
     print ('#HEADER')
     print ('#HEADER Simple topology analyzer')
     print ('#HEADER J.L Gelpi 2018')
     print ('#HEADER')
-    cmdline.printArgs(args)
-    
+    cmd_line.printArgs(args)
+
     st = loader.loadStructure()
 
 
@@ -46,7 +50,7 @@ def main():
                 args.useModels = False
             else:
                 args.useModels = True
-        elif args.useModels=='force':             
+        elif args.useModels=='force':
             if loader.models=='alt':
                 print ('#WARNING: Models found look like NMR models, but using all due to useModels = force')
             args.useModels=True
@@ -65,23 +69,23 @@ def main():
 #Checking chains
     if not args.useChains and len(st[0]) > 1:
         print ("#WARNING: Input Structure contains more than one chain ids, consider renumbering ")
-    
+
 #==============================================================================
 # Initializing topology object
-    top = bnsTopLib.Topology(args)
+    top = Topology(args)
 #Detecting Covalent Pairs
     top.calcCovLinks(st)
 # Building Chains
-    top.chList = bnsTopLib.ResidueSet.ResidueSetList(top.covLinkPairs)
-    
+    top.chList = ResidueSetList(top.covLinkPairs)
+
     print()
     print ('#INFO: Found %i chain(s)'% (top.chList.n))
-    
+
     for s in top.chList.getSortedSets():
         print ("#CH", s)
 # Residue list
     print ("\n#INFO: Residue Ids List")
-    
+
     i=0
     for s in top.chList.getSortedSets():
         print ('#CH', s.__str__(1))
@@ -97,7 +101,7 @@ def main():
                 for ch2 in top.conts[ch1]:
                     for c in top.conts[ch1][ch2]:
                         print ("#CT", '%i-%i %-10s %-10s %6.4f' % (ch1.id, ch2.id, c[0].atid(True), c[1].atid(True),c[2]))
-        
+
         if args.interface:
             print()
             print ("#INFO: Interface residues at "+ str(args.intdist) +"A")
@@ -105,7 +109,7 @@ def main():
                 for ch2 in top.intList[ch1]:
                     for s in top.intList[ch1][ch2].getSortedSets():
                         print ('#INTRES %i-%i %s' % (ch1.id, ch2.id,','.join(s.getResidueIdList())))
-                
+
     if not top.checkExistsNA():
         print()
         print ("#WARNING: No WC atom(s) found, skipping NA topology")
@@ -135,7 +139,7 @@ def main():
         for r in top.notInHF:
             nhf.append(r.resid(1))
         print ("#NHF",','.join(nhf))
-            
+
     if args.json:
         top.json().save(args.json)
         print()
@@ -143,7 +147,7 @@ def main():
 
     if args.graphml:
 # Graphml output
-        xml = bnsTopLib.GraphmlWriter()
+        xml = GraphmlWriter()
         for s in top.chList.getSortedSets():
             for res in s.items:
                 xml.addResidue(i,res)
@@ -154,6 +158,6 @@ def main():
                 xml.addBond("bp",bp.r1, bp.r2)
         xml.save(args.graphml)
         print ("#INFO: GRAPH data written on "+args.graphml)
-        
+
 if __name__ == "__main__":
     main()
